@@ -1079,6 +1079,214 @@ select:focus {
   max-width: 260px;
 }
 
+.users-admin-view {
+  width: min(1120px, 100%);
+}
+
+.admin-tabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #edf2f7;
+}
+
+.admin-tabs button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-tabs button.active {
+  background: #fff;
+  color: var(--navy);
+  box-shadow: 0 2px 8px rgba(8, 42, 89, 0.1);
+}
+
+.user-admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.user-admin-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #dce5f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.user-admin-card.inactive {
+  opacity: 0.68;
+}
+
+.user-admin-identity {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.user-admin-identity > span {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(16, 167, 163, 0.1);
+  color: var(--teal-dark);
+}
+
+.user-admin-identity div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.user-admin-identity strong,
+.user-admin-identity small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-admin-identity strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.user-admin-identity small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.toggle-row {
+  display: inline-flex;
+  min-width: 118px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.toggle-row input,
+.access-toggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--teal);
+}
+
+.toggle-row span {
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.access-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.access-role-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(8, 42, 89, 0.06);
+}
+
+.access-role-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.access-role-card header p {
+  margin: 0 0 3px;
+  color: var(--teal-dark);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.access-role-card header h2 {
+  font-size: 18px;
+}
+
+.access-role-card header button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(16, 167, 163, 0.35);
+  border-radius: 8px;
+  background: rgba(16, 167, 163, 0.09);
+  color: var(--teal-dark);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.access-role-card header button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.access-list {
+  display: grid;
+  gap: 8px;
+}
+
+.access-toggle {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 9px;
+  border: 1px solid #e3e9f0;
+  border-radius: 9px;
+  background: #f9fbfd;
+}
+
+.access-toggle span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.access-toggle strong {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.access-toggle small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .hospital-list {
   display: grid;
   gap: 10px;
@@ -2774,6 +2982,19 @@ select:focus {
     grid-row: 1 / 3;
     height: 100%;
   }
+
+  .user-admin-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .toggle-row {
+    justify-content: flex-start;
+  }
+
+  .access-scope-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 620px) {
@@ -3011,5 +3232,20 @@ select:focus {
 
   .settings-actions button {
     flex: 1 1 100%;
+  }
+
+  .admin-tabs {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .request-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-search {
+    max-width: none;
   }
 }

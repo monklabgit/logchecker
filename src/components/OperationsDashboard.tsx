@@ -18,6 +18,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
+import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhotoType, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
@@ -26,6 +27,7 @@ import { RequestDetails } from './RequestDetails';
 
 type OperationsDashboardProps = {
   profile: Profile;
+  access: RoleAccess;
   highlightedRequestId?: string;
   refreshKey?: number;
 };
@@ -46,15 +48,17 @@ const getOpenTask = (request: SurgeryRequest) =>
     .filter((task) => !['completed', 'cancelled'].includes(task.status))
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] || null;
 
-const actionForTask = (task: TransportTask | null, profile: Profile) => {
+const actionForTask = (task: TransportTask | null, profile: Profile, access: RoleAccess) => {
   if (!task) return null;
-  if (task.status === 'available' && ['driver', 'admin'].includes(profile.role)) {
+  if (task.status === 'available' && ['driver', 'admin'].includes(profile.role) && access.claim_routes) {
     return { action: 'claim', label: 'Assumir', icon: CircleDot };
   }
-  if (task.status === 'assigned' && (task.assigned_driver_id === profile.id || profile.role === 'admin')) {
+  if (task.status === 'assigned' && (task.assigned_driver_id === profile.id || profile.role === 'admin') && access.claim_routes) {
     return { action: 'start', label: 'Iniciar rota', icon: Play };
   }
   if (task.status === 'in_route' && (task.assigned_driver_id === profile.id || profile.role === 'admin')) {
+    if (task.type === 'delivery' && !access.complete_delivery) return null;
+    if (task.type === 'pickup' && !access.complete_pickup) return null;
     return {
       action: 'complete',
       label: task.type === 'delivery' ? 'Entregar' : 'Retornar',
@@ -87,7 +91,7 @@ const openNavigation = (provider: 'waze' | 'maps', query: string) => {
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
-export function OperationsDashboard({ profile, highlightedRequestId, refreshKey = 0 }: OperationsDashboardProps) {
+export function OperationsDashboard({ profile, access, highlightedRequestId, refreshKey = 0 }: OperationsDashboardProps) {
   const [requests, setRequests] = useState<SurgeryRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SurgeryRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -372,7 +376,7 @@ export function OperationsDashboard({ profile, highlightedRequestId, refreshKey 
             <div className="kanban-cards">
               {groupedRequests[column.status].map((request) => {
                 const task = getOpenTask(request);
-                const action = actionForTask(task, profile);
+                const action = actionForTask(task, profile, access);
                 const ActionIcon = action?.icon;
                 const routeQuery = routeQueryForTask(request, task);
                 const expanded = expandedCards.has(request.id);
@@ -501,6 +505,7 @@ export function OperationsDashboard({ profile, highlightedRequestId, refreshKey 
       {selectedRequest && (
         <RequestDetails
           profile={profile}
+          access={access}
           request={selectedRequest}
           onClose={() => setSelectedRequest(null)}
           onChanged={() => void loadRequests(true)}

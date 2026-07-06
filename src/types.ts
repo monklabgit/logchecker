@@ -20,6 +20,19 @@ export type Profile = {
   active: boolean;
 };
 
+export type AdminProfile = Profile & {
+  email: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RoleAccessScope = {
+  role: UserRole;
+  access_key: string;
+  enabled: boolean;
+  updated_at: string;
+};
+
 export type Hospital = {
   id: string;
   name: string;

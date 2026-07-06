@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, MapPin, PackageOpen, UserRound, X } from 'lucide-react';
+import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
@@ -7,6 +8,7 @@ import { EvidencePhotoPicker } from './EvidencePhotoPicker';
 
 type RequestDetailsProps = {
   profile: Profile;
+  access: RoleAccess;
   request: SurgeryRequest;
   onClose: () => void;
   onChanged: () => void;
@@ -36,7 +38,7 @@ const photoTypeLabels = {
   instrumentator_release: 'Liberação',
 };
 
-export function RequestDetails({ profile, request, onClose, onChanged }: RequestDetailsProps) {
+export function RequestDetails({ profile, access, request, onClose, onChanged }: RequestDetailsProps) {
   const [events, setEvents] = useState<TransportEvent[]>([]);
   const [signedPhotos, setSignedPhotos] = useState<Array<EvidencePhoto & { signedUrl: string }>>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -289,7 +291,7 @@ export function RequestDetails({ profile, request, onClose, onChanged }: Request
           {error && <p className="auth-message error">{error}</p>}
         </div>
 
-        {request.status === 'delivered' && ['admin', 'office', 'instrumentator'].includes(profile.role) && (
+        {request.status === 'delivered' && ['admin', 'office', 'instrumentator'].includes(profile.role) && access.release_materials && (
           <footer className="details-footer release-footer">
             <EvidencePhotoPicker photos={releasePhotos} onAddFiles={addReleasePhotos} onRemove={removeReleasePhoto} />
             <div className="release-actions">

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Building2, ClipboardPlus, LayoutDashboard, LoaderCircle, LogOut, Menu, RefreshCw, Settings, ShieldAlert, User } from 'lucide-react';
+import { Building2, ClipboardPlus, LayoutDashboard, LoaderCircle, LogOut, Menu, RefreshCw, Settings, ShieldAlert, User, Users } from 'lucide-react';
 import { AuthScreen } from './AuthScreen';
 import { HospitalsAdmin } from './components/HospitalsAdmin';
 import { NewRequestForm } from './components/NewRequestForm';
 import { OperationsDashboard } from './components/OperationsDashboard';
 import { UserSettingsModal } from './components/UserSettingsModal';
+import { UsersAdmin } from './components/UsersAdmin';
+import { DEFAULT_ROLE_ACCESS, emptyAccessMap } from './permissions';
 import { supabase } from './supabase';
-import type { Profile } from './types';
+import type { Profile, RoleAccessScope } from './types';
 
-type AppView = 'dashboard' | 'new-request' | 'hospitals';
+type AppView = 'dashboard' | 'new-request' | 'hospitals' | 'users';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -23,6 +25,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [saveNotice, setSaveNotice] = useState('');
+  const [roleAccess, setRoleAccess] = useState(() => emptyAccessMap());
 
   useEffect(() => {
     let mounted = true;
@@ -96,6 +99,40 @@ function App() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
+    const loadRoleAccess = async () => {
+      const { data, error } = await supabase.from('role_access_scopes').select('role, access_key, enabled, updated_at');
+      if (!mounted) return;
+
+      if (error) {
+        setRoleAccess(emptyAccessMap());
+        return;
+      }
+
+      const nextAccess = emptyAccessMap();
+      for (const row of (data || []) as RoleAccessScope[]) {
+        if (row.role in nextAccess && row.access_key in nextAccess[row.role]) {
+          nextAccess[row.role][row.access_key as keyof typeof nextAccess[typeof row.role]] = row.enabled;
+        }
+      }
+      setRoleAccess(nextAccess);
+    };
+
+    void loadRoleAccess();
+
+    const channel = supabase
+      .channel('role-access-scopes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'role_access_scopes' }, () => void loadRoleAccess())
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
     const showUpdate = () => setUpdateAvailable(true);
     window.addEventListener('logchecker-update-ready', showUpdate);
     return () => window.removeEventListener('logchecker-update-ready', showUpdate);
@@ -106,6 +143,26 @@ function App() {
     const timeout = window.setTimeout(() => setSaveNotice(''), 6000);
     return () => window.clearTimeout(timeout);
   }, [saveNotice]);
+
+  useEffect(() => {
+    if (!profile || !profile.active || profile.role === 'pending') return;
+
+    const access = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
+    const canView = access.view_dashboard;
+    const canCreate = access.create_requests;
+    const canHospitals = access.manage_hospitals;
+    const canUsers = profile.role === 'admin' || access.manage_users;
+
+    const allowed =
+      (view === 'dashboard' && canView) ||
+      (view === 'new-request' && canCreate) ||
+      (view === 'hospitals' && canHospitals) ||
+      (view === 'users' && canUsers);
+
+    if (allowed) return;
+
+    setView(canView ? 'dashboard' : canCreate ? 'new-request' : canHospitals ? 'hospitals' : 'users');
+  }, [profile, roleAccess, view]);
 
   const signOut = async () => {
     setAccountMenuOpen(false);
@@ -158,8 +215,12 @@ function App() {
     );
   }
 
-  const canCreateRequest = ['admin', 'office'].includes(profile.role);
-  const canManageHospitals = profile.role === 'admin';
+  const currentAccess = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
+  const canViewDashboard = currentAccess.view_dashboard;
+  const canCreateRequest = currentAccess.create_requests;
+  const canManageHospitals = currentAccess.manage_hospitals;
+  const canManageUsers = profile.role === 'admin' || currentAccess.manage_users;
+  const canManageWhatsapp = currentAccess.manage_whatsapp;
 
   return (
     <main className="app-shell operations-shell">
@@ -167,10 +228,12 @@ function App() {
         <img className="brand-logo" src="/logo.png" alt="LogChecker" />
 
         <nav className="main-navigation" aria-label="Navegação principal">
-          <button className={view === 'dashboard' ? 'active' : ''} type="button" onClick={() => setView('dashboard')}>
-            <LayoutDashboard size={18} />
-            <span>Painel</span>
-          </button>
+          {canViewDashboard && (
+            <button className={view === 'dashboard' ? 'active' : ''} type="button" onClick={() => setView('dashboard')}>
+              <LayoutDashboard size={18} />
+              <span>Painel</span>
+            </button>
+          )}
           {canCreateRequest && (
             <button className={view === 'new-request' ? 'active' : ''} type="button" onClick={() => setView('new-request')}>
               <ClipboardPlus size={18} />
@@ -181,6 +244,12 @@ function App() {
             <button className={view === 'hospitals' ? 'active' : ''} type="button" onClick={() => setView('hospitals')}>
               <Building2 size={18} />
               <span>Hospitais</span>
+            </button>
+          )}
+          {canManageUsers && (
+            <button className={view === 'users' ? 'active' : ''} type="button" onClick={() => setView('users')}>
+              <Users size={18} />
+              <span>Usuários</span>
             </button>
           )}
         </nav>
@@ -211,17 +280,19 @@ function App() {
                   <small>{session.user.email}</small>
                 </div>
               </div>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setSettingsOpen(true);
-                  setAccountMenuOpen(false);
-                }}
-              >
-                <Settings size={17} />
-                <span>Configurações</span>
-              </button>
+              {canManageWhatsapp && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setSettingsOpen(true);
+                    setAccountMenuOpen(false);
+                  }}
+                >
+                  <Settings size={17} />
+                  <span>Configurações</span>
+                </button>
+              )}
               <button type="button" role="menuitem" onClick={signOut}>
                 <LogOut size={17} />
                 <span>Sair</span>
@@ -254,12 +325,14 @@ function App() {
         <OperationsDashboard
           key={dashboardRefreshKey}
           profile={profile}
+          access={currentAccess}
           highlightedRequestId={highlightedRequestId}
           refreshKey={dashboardRefreshKey}
         />
       )}
       {view === 'new-request' && <NewRequestForm onSaved={handleSaved} />}
       {view === 'hospitals' && <HospitalsAdmin />}
+      {view === 'users' && <UsersAdmin />}
       {settingsOpen && <UserSettingsModal profile={profile} session={session} onClose={() => setSettingsOpen(false)} />}
     </main>
   );
