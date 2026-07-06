@@ -27,25 +27,52 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
+    const fetchProfile = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, active')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return data as Profile;
+    };
+
     const loadProfile = async (nextSession: Session | null) => {
       if (!nextSession) {
         if (mounted) {
           setProfile(null);
+          setProfileError('');
           setAuthLoading(false);
         }
         return;
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, active')
-        .eq('id', nextSession.user.id)
-        .single();
+      if (mounted) {
+        setProfileError('');
+      }
 
-      if (!mounted) return;
-      if (error) setProfileError(error.message);
-      else setProfile(data as Profile);
-      setAuthLoading(false);
+      try {
+        let data: Profile;
+
+        try {
+          data = await fetchProfile(nextSession.user.id);
+        } catch (error) {
+          if (!(error instanceof TypeError)) throw error;
+          await new Promise((resolve) => window.setTimeout(resolve, 700));
+          data = await fetchProfile(nextSession.user.id);
+        }
+
+        if (!mounted) return;
+        setProfile(data);
+        setProfileError('');
+      } catch (error) {
+        if (!mounted) return;
+        setProfile(null);
+        setProfileError(error instanceof Error ? error.message : 'Não foi possível carregar seu perfil.');
+      } finally {
+        if (mounted) setAuthLoading(false);
+      }
     };
 
     supabase.auth.getSession().then(({ data }) => {
