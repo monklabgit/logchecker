@@ -1,0 +1,172 @@
+import { useEffect, useRef, useState } from 'react';
+import { Camera, Image as ImageIcon, LoaderCircle, X } from 'lucide-react';
+
+type PendingPhoto = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
+
+type EvidencePhotoPickerProps = {
+  photos: PendingPhoto[];
+  onAddFiles: (files: File[]) => void;
+  onRemove: (photoId: string) => void;
+  emptyLabel?: string;
+};
+
+export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel = 'Nenhuma foto anexada' }: EvidencePhotoPickerProps) {
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+  };
+
+  useEffect(() => {
+    if (!cameraOpen) {
+      stopCamera();
+      return undefined;
+    }
+
+    let active = true;
+    setCameraLoading(true);
+    setCameraError('');
+
+    navigator.mediaDevices
+      ?.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1600 },
+          height: { ideal: 1200 },
+        },
+        audio: false,
+      })
+      .then((stream) => {
+        if (!active) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          void videoRef.current.play();
+        }
+      })
+      .catch(() => {
+        if (active) setCameraError('Não foi possível abrir a câmera. Use Galeria ou verifique a permissão do navegador.');
+      })
+      .finally(() => {
+        if (active) setCameraLoading(false);
+      });
+
+    return () => {
+      active = false;
+      stopCamera();
+    };
+  }, [cameraOpen]);
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) {
+      setCameraError('A câmera ainda está carregando.');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      setCameraError('Não foi possível capturar a imagem.');
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setCameraError('Não foi possível gerar a foto.');
+          return;
+        }
+
+        const file = new File([blob], `foto-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`, { type: 'image/jpeg' });
+        onAddFiles([file]);
+        setCameraOpen(false);
+      },
+      'image/jpeg',
+      0.88
+    );
+  };
+
+  return (
+    <div className="release-evidence-box">
+      <div className="release-evidence-header">
+        <strong>{photos.length ? `${photos.length} foto${photos.length > 1 ? 's' : ''} anexada${photos.length > 1 ? 's' : ''}` : emptyLabel}</strong>
+        <span>Mínimo obrigatório: 1 foto</span>
+      </div>
+
+      <div className="pending-photo-list">
+        {photos.map((photo, index) => (
+          <div className="pending-photo-thumb" key={photo.id}>
+            <img src={photo.previewUrl} alt={`Foto anexada ${index + 1}`} />
+            <button type="button" onClick={() => onRemove(photo.id)} aria-label="Remover foto">
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+
+        <button className="add-photo-tile" type="button" onClick={() => setCameraOpen(true)}>
+          <Camera size={18} />
+          <span>Tirar foto</span>
+        </button>
+        <button className="add-photo-tile" type="button" onClick={() => galleryInputRef.current?.click()}>
+          <ImageIcon size={18} />
+          <span>Galeria</span>
+        </button>
+      </div>
+
+      <input
+        ref={galleryInputRef}
+        className="photo-file-input"
+        accept="image/*"
+        type="file"
+        multiple
+        onChange={(event) => {
+          onAddFiles(Array.from(event.target.files || []));
+          event.target.value = '';
+        }}
+      />
+
+      {cameraOpen && (
+        <div className="camera-panel">
+          <div className="camera-preview">
+            {cameraLoading && (
+              <span>
+                <LoaderCircle className="spin" size={22} />
+                Abrindo câmera...
+              </span>
+            )}
+            <video ref={videoRef} playsInline muted autoPlay />
+          </div>
+          {cameraError && <p className="camera-error">{cameraError}</p>}
+          <div className="camera-actions">
+            <button className="secondary-button" type="button" onClick={() => setCameraOpen(false)}>
+              Cancelar
+            </button>
+            <button className="card-action-button" type="button" onClick={capturePhoto} disabled={cameraLoading || Boolean(cameraError)}>
+              <Camera size={17} />
+              Capturar foto
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

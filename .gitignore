@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dev-server.log
+dev-server-*.log
+[{]console.error*
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.codex-remote-attachments/
+.netlify/
+.env
+.env.*
+!.env.example

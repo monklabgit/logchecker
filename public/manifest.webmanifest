@@ -1,0 +1,17 @@
+{
+  "name": "LogChecker",
+  "short_name": "LogChecker",
+  "description": "Gerador de mensagens para entrada e retirada de materiais cirurgicos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8fb",
+  "theme_color": "#092a5a",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

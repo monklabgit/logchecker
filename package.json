@@ -1,0 +1,27 @@
+{
+  "name": "logchecker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "dev:vite": "node node_modules/vite/bin/vite.js --host 0.0.0.0 --port 5174",
+    "build": "node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build",
+    "preview": "node node_modules/vite/bin/vite.js preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.8.3",
+    "vite": "^5.4.19"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^3.0.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "netlify-cli": "^26.1.0"
+  }
+}
