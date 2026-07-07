@@ -10,7 +10,8 @@ export type AccessKey =
   | 'release_materials'
   | 'complete_pickup'
   | 'view_evidence'
-  | 'manage_whatsapp';
+  | 'manage_whatsapp'
+  | 'manage_inventory';
 
 export type RoleAccess = Record<AccessKey, boolean>;
 
@@ -63,6 +64,10 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
     title: 'Conectar WhatsApp',
     description: 'Conectar a própria instância de WhatsApp para disparos.',
   },
+  manage_inventory: {
+    title: 'Gerenciar estoque',
+    description: 'Cadastrar materiais, atualizar status e importar itens em massa.',
+  },
 };
 
 export const ACCESS_KEYS = Object.keys(ACCESS_LABELS) as AccessKey[];
@@ -79,6 +84,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     complete_pickup: false,
     view_evidence: false,
     manage_whatsapp: false,
+    manage_inventory: false,
   },
   admin: {
     view_dashboard: true,
@@ -91,6 +97,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     complete_pickup: true,
     view_evidence: true,
     manage_whatsapp: true,
+    manage_inventory: true,
   },
   office: {
     view_dashboard: true,
@@ -103,6 +110,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     complete_pickup: false,
     view_evidence: true,
     manage_whatsapp: true,
+    manage_inventory: true,
   },
   driver: {
     view_dashboard: true,
@@ -115,6 +123,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     complete_pickup: true,
     view_evidence: true,
     manage_whatsapp: true,
+    manage_inventory: false,
   },
   instrumentator: {
     view_dashboard: true,
@@ -127,6 +136,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     complete_pickup: false,
     view_evidence: true,
     manage_whatsapp: true,
+    manage_inventory: false,
   },
 };
 

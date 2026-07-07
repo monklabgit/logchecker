@@ -12,6 +12,8 @@ export type RequestStatus =
 export type TransportType = 'delivery' | 'pickup';
 export type TransportStatus = 'available' | 'assigned' | 'in_route' | 'completed' | 'cancelled';
 export type EvidencePhotoType = 'delivery' | 'pickup' | 'instrumentator_release';
+export type InventoryCategory = 'instrumental' | 'opme';
+export type InventoryStatus = 'in_stock' | 'in_route' | 'hospital' | 'consigned';
 
 export type Profile = {
   id: string;
@@ -45,6 +47,19 @@ export type Hospital = {
   maps_query: string;
   active: boolean;
   created_at: string;
+};
+
+export type InventoryItem = {
+  id: string;
+  category: InventoryCategory;
+  description: string;
+  quantity: string;
+  kit: string;
+  cjk: string;
+  status: InventoryStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type RequestItem = {
