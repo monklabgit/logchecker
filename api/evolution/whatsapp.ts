@@ -137,7 +137,7 @@ const buildNotificationMessage = (
   photoCount: number
 ) => {
   const codeLabel = requestCodeLabel(request.code);
-  const title = `${titleForEvent(eventType)} ${codeLabel} - ${request.hospital}`;
+  const title = `${titleForEvent(eventType)} - ${request.hospital}`;
   return [
     '===============',
     title,
