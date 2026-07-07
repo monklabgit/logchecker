@@ -105,6 +105,9 @@ const actionLineForEvent = (eventType: NotifyEventType) => {
   return 'Retirada concluída por';
 };
 
+const requestCodeLabel = (code: number | null | undefined) =>
+  typeof code === 'number' && Number.isFinite(code) ? `#${String(code).padStart(4, '0')}` : '#----';
+
 const sectionBlock = (
   request: { request_items: Array<{ section: string; quantity: string; description: string; note: string }> },
   section: 'CME' | 'OPME'
@@ -120,6 +123,7 @@ const sectionBlock = (
 
 const buildNotificationMessage = (
   request: {
+    code: number;
     hospital: string;
     surgeon: string;
     patient: string;
@@ -132,11 +136,13 @@ const buildNotificationMessage = (
   actorName: string,
   photoCount: number
 ) => {
-  const title = `${titleForEvent(eventType)} - ${request.hospital}`;
+  const codeLabel = requestCodeLabel(request.code);
+  const title = `${titleForEvent(eventType)} ${codeLabel} - ${request.hospital}`;
   return [
     '===============',
     title,
     '===============',
+    `Solicitação: ${codeLabel}`,
     `Cirurgião: ${request.surgeon || 'Não informado'}`,
     `Paciente: ${request.patient || 'Não informado'}`,
     `Data da Cirurgia: ${formatDate(request.surgery_date)}`,
@@ -313,7 +319,7 @@ export default async function handler(req: any, res: any) {
       const [{ data: request, error: requestError }, { data: profile }] = await Promise.all([
         supabase
           .from('surgery_requests')
-          .select('id, hospital, surgeon, patient, surgery_date, surgery_time, procedure, request_items(section, quantity, description, note)')
+          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, request_items(section, quantity, description, note)')
           .eq('id', body.requestId)
           .single(),
         supabase.from('profiles').select('full_name').eq('id', profileId).maybeSingle(),
@@ -337,6 +343,7 @@ export default async function handler(req: any, res: any) {
 
       const message = buildNotificationMessage(
         request as {
+          code: number;
           hospital: string;
           surgeon: string;
           patient: string;
@@ -349,6 +356,7 @@ export default async function handler(req: any, res: any) {
         profile?.full_name || userData.user.email || '',
         photos?.length || 0
       );
+      const codeLabel = requestCodeLabel((request as { code?: number } | null)?.code);
 
       await evolutionFetch(`/message/sendText/${encodeURIComponent(connection.instance_name)}`, {
         method: 'POST',
@@ -370,7 +378,7 @@ export default async function handler(req: any, res: any) {
             mimetype: photo.mime_type || 'image/jpeg',
             media: signed.signedUrl,
             fileName: photo.original_name || 'evidencia.jpg',
-            caption: `Evidência - ${titleForEvent(body.eventType)}`,
+            caption: `Evidência ${codeLabel} - ${titleForEvent(body.eventType)}`,
           }),
         });
         sentMedia += 1;
