@@ -139,7 +139,7 @@ const friendlyReadError = (message: string) => {
   }
 
   if (/failed to fetch|falha na leitura|unexpected token|404|html/i.test(message)) {
-    return 'Não consegui chamar a função da IA agora. Verifique se o app está rodando pelo Netlify Dev e tente anexar novamente.';
+    return 'Não consegui chamar a função da IA agora. Verifique se o ambiente está publicado corretamente e tente anexar novamente.';
   }
 
   return message || 'Não foi possível analisar o arquivo com IA.';

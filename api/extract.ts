@@ -1,11 +1,3 @@
-import type { Config, Context } from '@netlify/functions';
-
-declare const Netlify: {
-  env: {
-    get(name: string): string | undefined;
-  };
-};
-
 type MaterialItem = {
   quantity: string;
   description: string;
@@ -27,6 +19,13 @@ type ExtractionResult = {
   rawText: string;
 };
 
+type ExtractionRequest = {
+  image?: unknown;
+  file?: unknown;
+  filename?: unknown;
+  mimeType?: unknown;
+};
+
 const emptyResult: ExtractionResult = {
   hospital: '',
   surgeon: '',
@@ -40,10 +39,6 @@ const emptyResult: ExtractionResult = {
   receivedOpme: '',
   observation: '',
   rawText: '',
-};
-
-const jsonHeaders = {
-  'Content-Type': 'application/json',
 };
 
 const itemSchema = {
@@ -126,28 +121,30 @@ const normalizeResult = (value: Partial<ExtractionResult>): ExtractionResult => 
   opmeItems: Array.isArray(value.opmeItems) ? value.opmeItems : [],
 });
 
-type ExtractionRequest = {
-  image?: unknown;
-  file?: unknown;
-  filename?: unknown;
-  mimeType?: unknown;
+const sendJson = (res: any, status: number, payload: unknown) =>
+  res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
+
+const bodyFromRequest = (req: any): ExtractionRequest => {
+  if (req.body && typeof req.body === 'object') return req.body as ExtractionRequest;
+  if (typeof req.body === 'string') return JSON.parse(req.body) as ExtractionRequest;
+  return {};
 };
 
-export default async (req: Request, _context: Context) => {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: jsonHeaders });
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
-  const apiKey = (Netlify.env.get('OPENAI_API_KEY_IMG_READ') || process.env.OPENAI_API_KEY_IMG_READ)?.trim();
+  const apiKey = process.env.OPENAI_API_KEY_IMG_READ?.trim();
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'OPENAI_API_KEY_IMG_READ is not configured' }), { status: 500, headers: jsonHeaders });
+    return sendJson(res, 500, { error: 'OPENAI_API_KEY_IMG_READ is not configured' });
   }
 
   let fileData: string;
   let filename: string;
   let mimeType: string;
   try {
-    const body = (await req.json()) as ExtractionRequest;
+    const body = bodyFromRequest(req);
     fileData =
       typeof body.file === 'string'
         ? body.file
@@ -157,11 +154,11 @@ export default async (req: Request, _context: Context) => {
     filename = typeof body.filename === 'string' && body.filename.trim() ? body.filename.trim() : 'documento';
     mimeType = typeof body.mimeType === 'string' ? body.mimeType : '';
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: jsonHeaders });
+    return sendJson(res, 400, { error: 'Invalid JSON body' });
   }
 
   if (!fileData.startsWith('data:')) {
-    return new Response(JSON.stringify({ error: 'A data URL file is required' }), { status: 400, headers: jsonHeaders });
+    return sendJson(res, 400, { error: 'A data URL file is required' });
   }
 
   const isImage = fileData.startsWith('data:image/') || mimeType.startsWith('image/');
@@ -184,7 +181,7 @@ export default async (req: Request, _context: Context) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: Netlify.env.get('OPENAI_MODEL') || process.env.OPENAI_MODEL || 'gpt-4.1',
+      model: process.env.OPENAI_MODEL || 'gpt-4.1',
       input: [
         {
           role: 'user',
@@ -218,13 +215,10 @@ export default async (req: Request, _context: Context) => {
   const openAiBody = await response.json().catch(() => null);
 
   if (!response.ok) {
-    return new Response(
-      JSON.stringify({
-        error: 'OpenAI request failed',
-        detail: openAiBody?.error?.message || response.statusText,
-      }),
-      { status: 502, headers: jsonHeaders }
-    );
+    return sendJson(res, 502, {
+      error: 'OpenAI request failed',
+      detail: openAiBody?.error?.message || response.statusText,
+    });
   }
 
   const outputText =
@@ -237,22 +231,12 @@ export default async (req: Request, _context: Context) => {
           ?.trim();
 
   if (!outputText) {
-    return new Response(JSON.stringify({ error: 'OpenAI returned no text' }), { status: 502, headers: jsonHeaders });
+    return sendJson(res, 502, { error: 'OpenAI returned no text' });
   }
 
   try {
-    return new Response(JSON.stringify({ result: normalizeResult(JSON.parse(outputText)) }), {
-      status: 200,
-      headers: jsonHeaders,
-    });
+    return sendJson(res, 200, { result: normalizeResult(JSON.parse(outputText)) });
   } catch {
-    return new Response(JSON.stringify({ error: 'Could not parse OpenAI JSON output', raw: outputText }), {
-      status: 502,
-      headers: jsonHeaders,
-    });
+    return sendJson(res, 502, { error: 'Could not parse OpenAI JSON output', raw: outputText });
   }
-};
-
-export const config: Config = {
-  path: '/api/extract',
-};
+}

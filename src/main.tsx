@@ -23,9 +23,11 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   }
 }
 
-const isNetlifyPreview = window.location.hostname.endsWith('.netlify.app');
+const isPreviewDeployment =
+  window.location.hostname.endsWith('.vercel.app') &&
+  !window.location.hostname.startsWith('logchecker');
 
-if (import.meta.env.PROD && isNetlifyPreview && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && isPreviewDeployment && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
     registrations.forEach((registration) => void registration.unregister());
   });
@@ -37,7 +39,7 @@ if (import.meta.env.PROD && isNetlifyPreview && 'serviceWorker' in navigator) {
   }
 }
 
-if (import.meta.env.PROD && !isNetlifyPreview && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && !isPreviewDeployment && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')

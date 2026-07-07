@@ -1,9 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-const jsonHeaders = {
-  'Content-Type': 'application/json',
-};
-
 const cleanBaseUrl = (value = '') => value.trim().replace(/\/+$/, '');
 const instancePrefix = () => (process.env.EVOLUTION_INSTANCE_PREFIX || 'logchecker').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'logchecker';
 const defaultGroupJid = process.env.LOGCHECKER_WHATSAPP_GROUP_JID || '120363426513754062@g.us';
@@ -21,6 +17,15 @@ type WhatsappBody = {
   requestId?: string;
   eventType?: NotifyEventType;
   photoPaths?: string[];
+};
+
+const sendJson = (res: any, status: number, payload: unknown) =>
+  res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
+
+const bodyFromRequest = (req: any): WhatsappBody => {
+  if (req.body && typeof req.body === 'object') return req.body as WhatsappBody;
+  if (typeof req.body === 'string') return JSON.parse(req.body) as WhatsappBody;
+  return {};
 };
 
 const slugPart = (value = '') =>
@@ -148,16 +153,16 @@ const buildNotificationMessage = (
   ].filter(Boolean).join('\n');
 };
 
-export default async (req: Request) => {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: jsonHeaders });
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
-  const authHeader = req.headers.get('authorization') || '';
+  const authHeader = req.headers.authorization || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
   if (!token) {
-    return new Response(JSON.stringify({ error: 'Sessão ausente. Entre novamente para conectar o WhatsApp.' }), { status: 401, headers: jsonHeaders });
+    return sendJson(res, 401, { error: 'Sessão ausente. Entre novamente para conectar o WhatsApp.' });
   }
 
   const supabase = createClient(supabaseProjectUrl, supabasePublishableKey, {
@@ -167,14 +172,14 @@ export default async (req: Request) => {
 
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
   if (userError || !userData.user) {
-    return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401, headers: jsonHeaders });
+    return sendJson(res, 401, { error: 'Invalid session' });
   }
 
   let body: WhatsappBody = {};
   try {
-    body = (await req.json()) as WhatsappBody;
+    body = bodyFromRequest(req);
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: jsonHeaders });
+    return sendJson(res, 400, { error: 'Invalid JSON body' });
   }
 
   const profileId = userData.user.id;
@@ -183,6 +188,17 @@ export default async (req: Request) => {
   const getProfileName = async () => {
     const { data } = await supabase.from('profiles').select('full_name').eq('id', profileId).maybeSingle();
     return (data?.full_name || userData.user.email || '').trim();
+  };
+
+  const updateConnection = async (values: Record<string, unknown>) => {
+    const { data, error } = await supabase
+      .from('user_whatsapp_connections')
+      .update(values)
+      .eq('profile_id', profileId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
   };
 
   const getConnection = async () => {
@@ -232,22 +248,11 @@ export default async (req: Request) => {
     throw lastError || new Error('Não foi possível criar a instância do WhatsApp.');
   };
 
-  const updateConnection = async (values: Record<string, unknown>) => {
-    const { data, error } = await supabase
-      .from('user_whatsapp_connections')
-      .update(values)
-      .eq('profile_id', profileId)
-      .select('*')
-      .single();
-    if (error) throw error;
-    return data;
-  };
-
   try {
     if (action === 'status') {
       const connection = await getConnection();
       if (!connection) {
-        return new Response(JSON.stringify({ connection: null, state: 'not_configured' }), { status: 200, headers: jsonHeaders });
+        return sendJson(res, 200, { connection: null, state: 'not_configured' });
       }
 
       const statePayload = await evolutionFetch(`/instance/connectionState/${encodeURIComponent(connection.instance_name)}`);
@@ -259,7 +264,7 @@ export default async (req: Request) => {
         group_name: connection.group_name || defaultGroupName,
       });
 
-      return new Response(JSON.stringify({ connection: updated, state }), { status: 200, headers: jsonHeaders });
+      return sendJson(res, 200, { connection: updated, state });
     }
 
     if (action === 'connect') {
@@ -287,22 +292,22 @@ export default async (req: Request) => {
         last_qr_at: new Date().toISOString(),
       });
 
-      return new Response(JSON.stringify({ connection: updated, qrcode: base64, payload: qrPayload }), { status: 200, headers: jsonHeaders });
+      return sendJson(res, 200, { connection: updated, qrcode: base64, payload: qrPayload });
     }
 
     if (action === 'logout') {
       const connection = await getConnection();
       if (!connection) {
-        return new Response(JSON.stringify({ connection: null, state: 'not_configured' }), { status: 200, headers: jsonHeaders });
+        return sendJson(res, 200, { connection: null, state: 'not_configured' });
       }
       await evolutionFetch(`/instance/logout/${encodeURIComponent(connection.instance_name)}`, { method: 'DELETE' });
       const updated = await updateConnection({ connection_state: 'close', connected_at: null });
-      return new Response(JSON.stringify({ connection: updated, state: 'close' }), { status: 200, headers: jsonHeaders });
+      return sendJson(res, 200, { connection: updated, state: 'close' });
     }
 
     if (action === 'notify_operation') {
       if (!body.requestId || !body.eventType) {
-        return new Response(JSON.stringify({ error: 'requestId and eventType are required' }), { status: 400, headers: jsonHeaders });
+        return sendJson(res, 400, { error: 'requestId and eventType are required' });
       }
 
       const [{ data: request, error: requestError }, { data: profile }] = await Promise.all([
@@ -318,10 +323,10 @@ export default async (req: Request) => {
 
       const connection = await ensureConnection();
       if (connection.connection_state !== 'open') {
-        return new Response(JSON.stringify({ skipped: true, reason: 'WhatsApp não conectado.' }), { status: 200, headers: jsonHeaders });
+        return sendJson(res, 200, { skipped: true, reason: 'WhatsApp não conectado.' });
       }
 
-      const photoPaths = [...new Set((body.photoPaths || []).filter(Boolean))];
+      const photoPaths = Array.from(new Set((body.photoPaths || []).filter(Boolean)));
       const { data: photos } = photoPaths.length
         ? await supabase
             .from('transport_evidence_photos')
@@ -371,20 +376,13 @@ export default async (req: Request) => {
         sentMedia += 1;
       }
 
-      return new Response(JSON.stringify({ ok: true, sentMedia }), { status: 200, headers: jsonHeaders });
+      return sendJson(res, 200, { ok: true, sentMedia });
     }
 
-    return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: jsonHeaders });
+    return sendJson(res, 400, { error: 'Unknown action' });
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'WhatsApp action failed',
-      }),
-      { status: 502, headers: jsonHeaders }
-    );
+    return sendJson(res, 502, {
+      error: error instanceof Error ? error.message : 'WhatsApp action failed',
+    });
   }
-};
-
-export const config = {
-  path: '/api/evolution/whatsapp',
-};
+}
