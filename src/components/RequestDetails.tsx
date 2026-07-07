@@ -23,11 +23,11 @@ const statusLabels = {
 };
 
 const actionLabels = {
-  created: 'Tarefa criada',
-  claimed: 'Tarefa assumida',
+  created: 'Solicitação criada',
+  claimed: 'Solicitação assumida',
   started: 'Rota iniciada',
   completed: 'Movimentação concluída',
-  cancelled: 'Tarefa cancelada',
+  cancelled: 'Solicitação cancelada',
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
