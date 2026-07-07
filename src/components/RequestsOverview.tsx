@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { CalendarDays, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { Hospital, Profile, RequestStatus, SurgeryRequest } from '../types';
@@ -393,46 +393,59 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
           </div>
         ) : (
           <div className="overview-list">
-            {filteredRequests.map((request) => (
-              <article className={`overview-request-card status-${request.status}`} key={request.id}>
-                <div className="overview-request-main">
-                  <span className="request-code">#{String(request.code).padStart(4, '0')}</span>
-                  <h3>{request.hospital}</h3>
-                  <p>{request.procedure || 'Procedimento não informado'}</p>
-                  <div className="overview-request-meta">
-                    <span>
-                      <CalendarDays size={14} />
-                      {request.surgery_date ? dateFormatter.format(new Date(`${request.surgery_date}T12:00:00`)) : 'Sem data'}
-                      {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
-                    </span>
-                    <span>{request.patient || 'Paciente não informado'}</span>
-                    <span>{request.request_items.length} material(is)</span>
+            {filteredRequests.map((request) => {
+              const routeTask =
+                request.transport_tasks
+                  .filter((task) => task.status === 'in_route' && task.type === (request.status === 'pickup_in_route' ? 'pickup' : 'delivery'))
+                  .sort((a, b) => b.started_at?.localeCompare(a.started_at || '') || b.created_at.localeCompare(a.created_at))[0] || null;
+
+              return (
+                <article className={`overview-request-card status-${request.status}`} key={request.id}>
+                  <div className="overview-request-main">
+                    <span className="request-code">#{String(request.code).padStart(4, '0')}</span>
+                    <h3>{request.hospital}</h3>
+                    <p>{request.procedure || 'Procedimento não informado'}</p>
+                    <div className="overview-request-meta">
+                      <span>
+                        <CalendarDays size={14} />
+                        {request.surgery_date ? dateFormatter.format(new Date(`${request.surgery_date}T12:00:00`)) : 'Sem data'}
+                        {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
+                      </span>
+                      <span>{request.patient || 'Paciente não informado'}</span>
+                      <span>{request.request_items.length} material(is)</span>
+                      {routeTask?.assigned_driver && (
+                        <span className="overview-driver-meta">
+                          <UserRound size={14} />
+                          Motorista: {routeTask.assigned_driver.full_name || 'Sem nome'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="overview-request-state">
-                  <span className="overview-status-pill">{statusLabels[request.status]}</span>
-                  <small>Prioridade {priorityLabels[request.priority] || 'Normal'}</small>
-                </div>
-                <div className="overview-actions" aria-label="Ações da solicitação">
-                  <button type="button" onClick={() => setSelectedRequest(request)} title="Ver detalhes" aria-label="Ver detalhes">
-                    <Eye size={16} />
-                  </button>
-                  <button type="button" onClick={() => startEdit(request)} title="Editar solicitação" aria-label="Editar solicitação">
-                    <Edit3 size={16} />
-                  </button>
-                  <button
-                    className="danger"
-                    type="button"
-                    onClick={() => void cancelRequest(request)}
-                    disabled={request.status === 'cancelled' || cancellingId === request.id}
-                    title="Cancelar solicitação"
-                    aria-label="Cancelar solicitação"
-                  >
-                    {cancellingId === request.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <div className="overview-request-state">
+                    <span className="overview-status-pill">{statusLabels[request.status]}</span>
+                    <small>Prioridade {priorityLabels[request.priority] || 'Normal'}</small>
+                  </div>
+                  <div className="overview-actions" aria-label="Ações da solicitação">
+                    <button type="button" onClick={() => setSelectedRequest(request)} title="Ver detalhes" aria-label="Ver detalhes">
+                      <Eye size={16} />
+                    </button>
+                    <button type="button" onClick={() => startEdit(request)} title="Editar solicitação" aria-label="Editar solicitação">
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      className="danger"
+                      type="button"
+                      onClick={() => void cancelRequest(request)}
+                      disabled={request.status === 'cancelled' || cancellingId === request.id}
+                      title="Cancelar solicitação"
+                      aria-label="Cancelar solicitação"
+                    >
+                      {cancellingId === request.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
 
             {!filteredRequests.length && (
               <div className="empty-column">

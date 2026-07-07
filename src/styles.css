@@ -2428,6 +2428,10 @@ select:focus {
   gap: 4px;
 }
 
+.overview-request-meta .overview-driver-meta {
+  color: var(--teal-dark);
+}
+
 .overview-request-state {
   display: grid;
   justify-items: end;
