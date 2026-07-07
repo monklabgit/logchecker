@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, MapPin, PackageOpen, UserRound, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
@@ -210,10 +210,6 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
                     : 'Não informada'}
                   {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
                 </dd>
-              </div>
-              <div>
-                <dt><MapPin size={15} /> Origem do cadastro</dt>
-                <dd>{request.origin === 'image' ? 'Leitura de imagem' : request.origin === 'document' ? 'Documento' : 'Manual'}</dd>
               </div>
             </dl>
           </section>
