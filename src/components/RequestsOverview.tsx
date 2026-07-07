@@ -10,7 +10,7 @@ type RequestsOverviewProps = {
   access: RoleAccess;
 };
 
-type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'without_date';
+type PeriodFilter = 'all' | 'today' | 'week' | 'month';
 
 type EditForm = {
   hospitalId: string;
@@ -54,7 +54,7 @@ const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(),
 
 const inPeriod = (request: SurgeryRequest, period: PeriodFilter) => {
   if (period === 'all') return true;
-  if (!request.surgery_date) return period === 'without_date';
+  if (!request.surgery_date) return false;
 
   const surgeryDate = startOfDay(new Date(`${request.surgery_date}T12:00:00`));
   const today = startOfDay(new Date());
@@ -373,7 +373,6 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
               <option value="today">Hoje</option>
               <option value="week">Esta semana</option>
               <option value="month">Este mês</option>
-              <option value="without_date">Sem data</option>
               <option value="all">Todos</option>
             </select>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | RequestStatus)} aria-label="Filtrar status">
