@@ -25,7 +25,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 export const ACCESS_LABELS: Record<AccessKey, { title: string; description: string }> = {
   view_dashboard: {
-    title: 'Visualizar painel',
+    title: 'Visualizar fluxo',
     description: 'Acessar o fluxo de materiais e os detalhes das solicitações.',
   },
   create_requests: {
@@ -42,7 +42,7 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
   },
   claim_routes: {
     title: 'Assumir rotas',
-    description: 'Assumir entregas ou retiradas disponíveis no painel.',
+    description: 'Assumir entregas ou retiradas disponíveis no fluxo.',
   },
   complete_delivery: {
     title: 'Concluir entregas',

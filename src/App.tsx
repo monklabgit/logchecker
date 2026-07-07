@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Archive, Building2, ClipboardPlus, LayoutDashboard, LoaderCircle, LogOut, Menu, RefreshCw, Settings, ShieldAlert, User, Users } from 'lucide-react';
+import { Archive, Building2, ClipboardPlus, ListChecks, LoaderCircle, LogOut, Menu, RefreshCw, Route, Settings, ShieldAlert, User, Users } from 'lucide-react';
 import { AuthScreen } from './AuthScreen';
 import { HospitalsAdmin } from './components/HospitalsAdmin';
 import { InventoryAdmin } from './components/InventoryAdmin';
 import { NewRequestForm } from './components/NewRequestForm';
 import { OperationsDashboard } from './components/OperationsDashboard';
+import { RequestsOverview } from './components/RequestsOverview';
 import { UserSettingsModal } from './components/UserSettingsModal';
 import { UsersAdmin } from './components/UsersAdmin';
 import { DEFAULT_ROLE_ACCESS, emptyAccessMap } from './permissions';
 import { supabase } from './supabase';
 import type { Profile, RoleAccessScope } from './types';
 
-type AppView = 'dashboard' | 'new-request' | 'inventory' | 'hospitals' | 'users';
+type AppView = 'flow' | 'requests' | 'new-request' | 'inventory' | 'hospitals' | 'users';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
-  const [view, setView] = useState<AppView>('dashboard');
+  const [view, setView] = useState<AppView>('flow');
   const [highlightedRequestId, setHighlightedRequestId] = useState('');
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -161,14 +162,16 @@ function App() {
     if (!profile || !profile.active || profile.role === 'pending') return;
 
     const access = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
-    const canView = access.view_dashboard;
+    const canFlow = access.view_dashboard && ['driver', 'instrumentator'].includes(profile.role);
+    const canRequests = ['admin', 'office'].includes(profile.role);
     const canCreate = access.create_requests;
     const canInventory = access.manage_inventory;
     const canHospitals = access.manage_hospitals;
     const canUsers = profile.role === 'admin' || access.manage_users;
 
     const allowed =
-      (view === 'dashboard' && canView) ||
+      (view === 'flow' && canFlow) ||
+      (view === 'requests' && canRequests) ||
       (view === 'new-request' && canCreate) ||
       (view === 'inventory' && canInventory) ||
       (view === 'hospitals' && canHospitals) ||
@@ -176,7 +179,7 @@ function App() {
 
     if (allowed) return;
 
-    setView(canView ? 'dashboard' : canCreate ? 'new-request' : canInventory ? 'inventory' : canHospitals ? 'hospitals' : 'users');
+    setView(canRequests ? 'requests' : canFlow ? 'flow' : canCreate ? 'new-request' : canInventory ? 'inventory' : canHospitals ? 'hospitals' : 'users');
   }, [profile, roleAccess, view]);
 
   const signOut = async () => {
@@ -188,7 +191,7 @@ function App() {
     setHighlightedRequestId(requestId);
     setSaveNotice('Solicitação salva com sucesso e disponível para entrega.');
     setDashboardRefreshKey((current) => current + 1);
-    setView('dashboard');
+    setView(['admin', 'office'].includes(profile?.role || '') ? 'requests' : 'flow');
   };
 
   if (authLoading) {
@@ -231,7 +234,8 @@ function App() {
   }
 
   const currentAccess = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
-  const canViewDashboard = currentAccess.view_dashboard;
+  const canViewFlow = currentAccess.view_dashboard && ['driver', 'instrumentator'].includes(profile.role);
+  const canViewRequests = ['admin', 'office'].includes(profile.role);
   const canCreateRequest = currentAccess.create_requests;
   const canManageInventory = currentAccess.manage_inventory;
   const canManageHospitals = currentAccess.manage_hospitals;
@@ -244,10 +248,16 @@ function App() {
         <img className="brand-logo" src="/logo.png" alt="LogChecker" />
 
         <nav className="main-navigation" aria-label="Navegação principal">
-          {canViewDashboard && (
-            <button className={view === 'dashboard' ? 'active' : ''} type="button" onClick={() => setView('dashboard')}>
-              <LayoutDashboard size={18} />
-              <span>Painel</span>
+          {canViewFlow && (
+            <button className={view === 'flow' ? 'active' : ''} type="button" onClick={() => setView('flow')}>
+              <Route size={18} />
+              <span>Fluxo</span>
+            </button>
+          )}
+          {canViewRequests && (
+            <button className={view === 'requests' ? 'active' : ''} type="button" onClick={() => setView('requests')}>
+              <ListChecks size={18} />
+              <span>Solicitações</span>
             </button>
           )}
           {canCreateRequest && (
@@ -343,7 +353,7 @@ function App() {
         </div>
       )}
 
-      {view === 'dashboard' && (
+      {view === 'flow' && (
         <OperationsDashboard
           key={dashboardRefreshKey}
           profile={profile}
@@ -352,6 +362,7 @@ function App() {
           refreshKey={dashboardRefreshKey}
         />
       )}
+      {view === 'requests' && <RequestsOverview profile={profile} access={currentAccess} />}
       {view === 'new-request' && <NewRequestForm onSaved={handleSaved} />}
       {view === 'inventory' && <InventoryAdmin />}
       {view === 'hospitals' && <HospitalsAdmin />}

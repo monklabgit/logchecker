@@ -588,7 +588,7 @@ export function NewRequestForm({ onSaved }: NewRequestFormProps) {
       {error && <p className="auth-message error">{error}</p>}
 
       <footer className="request-submit-bar">
-        <p>Ao salvar, a solicitação ficará disponível para entrega no painel.</p>
+        <p>Ao salvar, a solicitação ficará disponível para acompanhamento operacional.</p>
         <button type="button" onClick={() => void saveRequest()} disabled={saving}>
           {saving ? <LoaderCircle className="spin" size={19} /> : <Save size={19} />}
           {saving ? 'Salvando...' : 'Salvar solicitação'}
