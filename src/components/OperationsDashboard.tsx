@@ -32,13 +32,13 @@ type OperationsDashboardProps = {
   refreshKey?: number;
 };
 
-const columns: Array<{ status: RequestStatus; label: string; tone: string }> = [
-  { status: 'ready_delivery', label: 'Disponível para entrega', tone: 'blue' },
-  { status: 'delivery_in_route', label: 'Em rota de entrega', tone: 'amber' },
-  { status: 'delivered', label: 'Entregue', tone: 'green' },
-  { status: 'ready_pickup', label: 'Disponível para retirada', tone: 'purple' },
-  { status: 'pickup_in_route', label: 'Em rota de retirada', tone: 'amber' },
-  { status: 'returned_stock', label: 'Retornado ao estoque', tone: 'slate' },
+const columns: Array<{ status: RequestStatus; label: string; tone: string; icon: typeof Box }> = [
+  { status: 'ready_delivery', label: 'Disponível para entrega', tone: 'blue', icon: Box },
+  { status: 'delivery_in_route', label: 'Em rota de entrega', tone: 'amber', icon: Truck },
+  { status: 'delivered', label: 'Entregue', tone: 'green', icon: CheckCircle2 },
+  { status: 'ready_pickup', label: 'Disponível para retirada', tone: 'purple', icon: PackageCheck },
+  { status: 'pickup_in_route', label: 'Em rota de retirada', tone: 'amber', icon: Truck },
+  { status: 'returned_stock', label: 'Retornado ao estoque', tone: 'slate', icon: PackageCheck },
 ];
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
@@ -362,144 +362,150 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       {error && <p className="auth-message error">{error}</p>}
 
       <div className="kanban-board">
-        {columns.map((column) => (
-          <section className={`kanban-column tone-${column.tone} ${collapsedColumns.has(column.status) ? 'mobile-collapsed' : ''}`} key={column.status}>
-            <header>
-              <button type="button" onClick={() => toggleColumn(column.status)} aria-expanded={!collapsedColumns.has(column.status)}>
-                <span className="status-dot" />
-                <h2>{column.label}</h2>
-                <ChevronDown className={collapsedColumns.has(column.status) ? '' : 'expanded'} size={17} />
-              </button>
-              <strong>{groupedRequests[column.status].length}</strong>
-            </header>
+        {columns.map((column) => {
+          const ColumnIcon = column.icon;
 
-            <div className="kanban-cards">
-              {groupedRequests[column.status].map((request) => {
-                const task = getOpenTask(request);
-                const action = actionForTask(task, profile, access);
-                const ActionIcon = action?.icon;
-                const routeQuery = routeQueryForTask(request, task);
-                const expanded = expandedCards.has(request.id);
-                const canNavigate =
-                  Boolean(routeQuery) &&
-                  Boolean(task) &&
-                  ['assigned', 'in_route'].includes(task?.status || '') &&
-                  (task?.assigned_driver_id === profile.id || profile.role === 'admin');
+          return (
+            <section className={`kanban-column tone-${column.tone} ${collapsedColumns.has(column.status) ? 'mobile-collapsed' : ''}`} key={column.status}>
+              <header>
+                <button type="button" onClick={() => toggleColumn(column.status)} aria-expanded={!collapsedColumns.has(column.status)}>
+                  <span className="status-icon" aria-hidden="true">
+                    <ColumnIcon size={15} />
+                  </span>
+                  <h2>{column.label}</h2>
+                  <ChevronDown className={collapsedColumns.has(column.status) ? '' : 'expanded'} size={17} />
+                </button>
+                <strong>{groupedRequests[column.status].length}</strong>
+              </header>
 
-                return (
-                  <article
-                    className={`operation-card priority-${request.priority} ${expanded ? 'expanded' : 'collapsed'} ${
-                      request.id === highlightedRequestId ? 'highlighted' : ''
-                    }`}
-                    data-request-id={request.id}
-                    key={request.id}
-                  >
-                    <button
-                      className="operation-card-summary"
-                      type="button"
-                      onClick={() => toggleCard(request.id)}
-                      aria-expanded={expanded}
+              <div className="kanban-cards">
+                {groupedRequests[column.status].map((request) => {
+                  const task = getOpenTask(request);
+                  const action = actionForTask(task, profile, access);
+                  const ActionIcon = action?.icon;
+                  const routeQuery = routeQueryForTask(request, task);
+                  const expanded = expandedCards.has(request.id);
+                  const canNavigate =
+                    Boolean(routeQuery) &&
+                    Boolean(task) &&
+                    ['assigned', 'in_route'].includes(task?.status || '') &&
+                    (task?.assigned_driver_id === profile.id || profile.role === 'admin');
+
+                  return (
+                    <article
+                      className={`operation-card priority-${request.priority} ${expanded ? 'expanded' : 'collapsed'} ${
+                        request.id === highlightedRequestId ? 'highlighted' : ''
+                      }`}
+                      data-request-id={request.id}
+                      key={request.id}
                     >
-                      <span>
-                        <strong>{request.hospital}</strong>
-                      </span>
-                      <ChevronDown className={expanded ? 'expanded' : ''} size={18} />
-                    </button>
+                      <button
+                        className="operation-card-summary"
+                        type="button"
+                        onClick={() => toggleCard(request.id)}
+                        aria-expanded={expanded}
+                      >
+                        <span>
+                          <strong>{request.hospital}</strong>
+                        </span>
+                        <ChevronDown className={expanded ? 'expanded' : ''} size={18} />
+                      </button>
 
-                    {expanded && (
-                      <>
-                        <div className="operation-card-subtitle">
-                          <p>{request.procedure || 'Procedimento não informado'}</p>
-                          <span className="item-count">
-                            <Box size={14} />
-                            {request.request_items.length}
-                          </span>
-                        </div>
+                      {expanded && (
+                        <>
+                          <div className="operation-card-subtitle">
+                            <p>{request.procedure || 'Procedimento não informado'}</p>
+                            <span className="item-count">
+                              <Box size={14} />
+                              {request.request_items.length}
+                            </span>
+                          </div>
 
-                        <dl className="card-facts">
-                          {request.patient && (
-                            <div>
-                              <dt>
-                                <UserRound size={13} /> Paciente
-                              </dt>
-                              <dd>{request.patient}</dd>
-                            </div>
+                          <dl className="card-facts">
+                            {request.patient && (
+                              <div>
+                                <dt>
+                                  <UserRound size={13} /> Paciente
+                                </dt>
+                                <dd>{request.patient}</dd>
+                              </div>
+                            )}
+                            {request.surgery_date && (
+                              <div>
+                                <dt>
+                                  <CalendarDays size={13} /> Cirurgia
+                                </dt>
+                                <dd>
+                                  {dateFormatter.format(new Date(`${request.surgery_date}T12:00:00`))}
+                                  {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
+                                </dd>
+                              </div>
+                            )}
+                            {task && (
+                              <div>
+                                <dt>
+                                  <MapPin size={13} /> Rota
+                                </dt>
+                                <dd className="route-line">
+                                  {task.origin_label} <ArrowRight size={12} /> {task.destination_label}
+                                </dd>
+                              </div>
+                            )}
+                          </dl>
+
+                          {task?.assigned_driver && (
+                            <p className="driver-chip">
+                              <Truck size={14} />
+                              {task.assigned_driver.full_name || 'Motorista'}
+                            </p>
                           )}
-                          {request.surgery_date && (
-                            <div>
-                              <dt>
-                                <CalendarDays size={13} /> Cirurgia
-                              </dt>
-                              <dd>
-                                {dateFormatter.format(new Date(`${request.surgery_date}T12:00:00`))}
-                                {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
-                              </dd>
-                            </div>
-                          )}
-                          {task && (
-                            <div>
-                              <dt>
-                                <MapPin size={13} /> Rota
-                              </dt>
-                              <dd className="route-line">
-                                {task.origin_label} <ArrowRight size={12} /> {task.destination_label}
-                              </dd>
-                            </div>
-                          )}
-                        </dl>
 
-                        {task?.assigned_driver && (
-                          <p className="driver-chip">
-                            <Truck size={14} />
-                            {task.assigned_driver.full_name || 'Motorista'}
-                          </p>
-                        )}
+                          <div className="operation-actions compact">
+                            {canNavigate && (
+                              <button
+                                className="card-route-button"
+                                type="button"
+                                onClick={() => setNavigationTarget({ title: request.hospital, query: routeQuery })}
+                              >
+                                <Navigation size={16} />
+                                Navegar
+                              </button>
+                            )}
+                            {action && task && ActionIcon && (
+                              <button
+                                className="card-action-button"
+                                type="button"
+                                onClick={() => startTaskAction(request, task, action.action)}
+                                disabled={actingTaskId === task.id}
+                              >
+                                {actingTaskId === task.id ? <LoaderCircle className="spin" size={16} /> : <ActionIcon size={16} />}
+                                {action.label}
+                              </button>
+                            )}
+                          </div>
 
-                        <div className="operation-actions compact">
-                          {canNavigate && (
-                            <button
-                              className="card-route-button"
-                              type="button"
-                              onClick={() => setNavigationTarget({ title: request.hospital, query: routeQuery })}
-                            >
-                              <Navigation size={16} />
-                              Navegar
+                          <footer className="operation-card-footer">
+                            <button type="button" onClick={() => setSelectedRequest(request)}>
+                              <Eye size={15} />
+                              Detalhes
                             </button>
-                          )}
-                          {action && task && ActionIcon && (
-                            <button
-                              className="card-action-button"
-                              type="button"
-                              onClick={() => startTaskAction(request, task, action.action)}
-                              disabled={actingTaskId === task.id}
-                            >
-                              {actingTaskId === task.id ? <LoaderCircle className="spin" size={16} /> : <ActionIcon size={16} />}
-                              {action.label}
-                            </button>
-                          )}
-                        </div>
+                          </footer>
+                        </>
+                      )}
+                    </article>
+                  );
+                })}
 
-                        <footer className="operation-card-footer">
-                          <button type="button" onClick={() => setSelectedRequest(request)}>
-                            <Eye size={15} />
-                            Detalhes
-                          </button>
-                        </footer>
-                      </>
-                    )}
-                  </article>
-                );
-              })}
-
-              {!groupedRequests[column.status].length && (
-                <div className="empty-column">
-                  <CheckCircle2 size={22} />
-                  <span>Nenhuma solicitação</span>
-                </div>
-              )}
-            </div>
-          </section>
-        ))}
+                {!groupedRequests[column.status].length && (
+                  <div className="empty-column">
+                    <CheckCircle2 size={22} />
+                    <span>Nenhuma solicitação</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       {selectedRequest && (
