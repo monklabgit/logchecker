@@ -19,6 +19,13 @@ type WhatsappBody = {
   photoPaths?: string[];
 };
 
+type WhatsappConnection = {
+  instance_name: string;
+  connection_state: string;
+  group_jid: string;
+  group_name: string;
+};
+
 const sendJson = (res: any, status: number, payload: unknown) =>
   res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
 
@@ -214,7 +221,7 @@ export default async function handler(req: any, res: any) {
       .eq('profile_id', profileId)
       .maybeSingle();
     if (error) throw error;
-    return data as { instance_name: string; connection_state: string; group_jid: string; group_name: string } | null;
+    return data as WhatsappConnection | null;
   };
 
   const ensureDefaultGroup = async (connection: { group_jid: string; group_name: string } | null) => {
@@ -227,7 +234,7 @@ export default async function handler(req: any, res: any) {
 
   const ensureConnection = async () => {
     const existing = await getConnection();
-    if (existing) return (await ensureDefaultGroup(existing)) as { instance_name: string; connection_state: string; group_jid: string; group_name: string };
+    if (existing) return (await ensureDefaultGroup(existing)) as WhatsappConnection;
 
     const profileName = await getProfileName();
     let lastError: unknown = null;
@@ -246,12 +253,23 @@ export default async function handler(req: any, res: any) {
         .select('*')
         .single();
 
-      if (!error && data) return data as { instance_name: string; connection_state: string; group_jid: string; group_name: string };
+      if (!error && data) return data as WhatsappConnection;
       lastError = error;
       if (!/duplicate|unique/i.test(error?.message || '')) break;
     }
 
     throw lastError || new Error('Não foi possível criar a instância do WhatsApp.');
+  };
+
+  const refreshConnectionState = async (connection: WhatsappConnection) => {
+    const statePayload = await evolutionFetch(`/instance/connectionState/${encodeURIComponent(connection.instance_name)}`);
+    const state = statePayload?.instance?.state || statePayload?.state || 'close';
+    return (await updateConnection({
+      connection_state: state,
+      connected_at: state === 'open' ? new Date().toISOString() : null,
+      group_jid: connection.group_jid || defaultGroupJid,
+      group_name: connection.group_name || defaultGroupName,
+    })) as WhatsappConnection;
   };
 
   try {
@@ -261,16 +279,9 @@ export default async function handler(req: any, res: any) {
         return sendJson(res, 200, { connection: null, state: 'not_configured' });
       }
 
-      const statePayload = await evolutionFetch(`/instance/connectionState/${encodeURIComponent(connection.instance_name)}`);
-      const state = statePayload?.instance?.state || statePayload?.state || 'close';
-      const updated = await updateConnection({
-        connection_state: state,
-        connected_at: state === 'open' ? new Date().toISOString() : null,
-        group_jid: connection.group_jid || defaultGroupJid,
-        group_name: connection.group_name || defaultGroupName,
-      });
+      const updated = await refreshConnectionState(connection);
 
-      return sendJson(res, 200, { connection: updated, state });
+      return sendJson(res, 200, { connection: updated, state: updated.connection_state });
     }
 
     if (action === 'connect') {
@@ -328,8 +339,30 @@ export default async function handler(req: any, res: any) {
       if (requestError) throw requestError;
 
       const connection = await ensureConnection();
-      if (connection.connection_state !== 'open') {
-        return sendJson(res, 200, { skipped: true, reason: 'WhatsApp não conectado.' });
+      let activeConnection = connection;
+      try {
+        activeConnection = await refreshConnectionState(connection);
+      } catch (stateError) {
+        console.error('WhatsApp notification connection state check failed', {
+          requestId: body.requestId,
+          eventType: body.eventType,
+          instanceName: connection.instance_name,
+          error: stateError instanceof Error ? stateError.message : stateError,
+        });
+      }
+
+      if (activeConnection.connection_state !== 'open') {
+        console.warn('WhatsApp notification skipped', {
+          requestId: body.requestId,
+          eventType: body.eventType,
+          instanceName: activeConnection.instance_name,
+          connectionState: activeConnection.connection_state,
+        });
+        return sendJson(res, 200, {
+          skipped: true,
+          reason: 'WhatsApp não conectado.',
+          state: activeConnection.connection_state,
+        });
       }
 
       const photoPaths = Array.from(new Set((body.photoPaths || []).filter(Boolean)));
@@ -358,10 +391,10 @@ export default async function handler(req: any, res: any) {
       );
       const codeLabel = requestCodeLabel((request as { code?: number } | null)?.code);
 
-      await evolutionFetch(`/message/sendText/${encodeURIComponent(connection.instance_name)}`, {
+      await evolutionFetch(`/message/sendText/${encodeURIComponent(activeConnection.instance_name)}`, {
         method: 'POST',
         body: JSON.stringify({
-          number: connection.group_jid,
+          number: activeConnection.group_jid,
           text: message,
         }),
       });
@@ -370,10 +403,10 @@ export default async function handler(req: any, res: any) {
       for (const photo of photos || []) {
         const { data: signed } = await supabase.storage.from('transport-evidence-photos').createSignedUrl(photo.storage_path, 60 * 20);
         if (!signed?.signedUrl) continue;
-        await evolutionFetch(`/message/sendMedia/${encodeURIComponent(connection.instance_name)}`, {
+        await evolutionFetch(`/message/sendMedia/${encodeURIComponent(activeConnection.instance_name)}`, {
           method: 'POST',
           body: JSON.stringify({
-            number: connection.group_jid,
+            number: activeConnection.group_jid,
             mediatype: 'image',
             mimetype: photo.mime_type || 'image/jpeg',
             media: signed.signedUrl,
@@ -383,6 +416,13 @@ export default async function handler(req: any, res: any) {
         });
         sentMedia += 1;
       }
+
+      console.info('WhatsApp notification sent', {
+        requestId: body.requestId,
+        eventType: body.eventType,
+        instanceName: activeConnection.instance_name,
+        sentMedia,
+      });
 
       return sendJson(res, 200, { ok: true, sentMedia });
     }
