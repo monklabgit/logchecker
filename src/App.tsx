@@ -30,6 +30,7 @@ function App() {
 
   useEffect(() => {
     let mounted = true;
+    let loadedProfileUserId = '';
 
     const fetchProfile = async (userId: string) => {
       const { data, error } = await supabase
@@ -44,6 +45,7 @@ function App() {
 
     const loadProfile = async (nextSession: Session | null) => {
       if (!nextSession) {
+        loadedProfileUserId = '';
         if (mounted) {
           setProfile(null);
           setProfileError('');
@@ -68,10 +70,12 @@ function App() {
         }
 
         if (!mounted) return;
+        loadedProfileUserId = data.id;
         setProfile(data);
         setProfileError('');
       } catch (error) {
         if (!mounted) return;
+        loadedProfileUserId = '';
         setProfile(null);
         setProfileError(error instanceof Error ? error.message : 'Não foi possível carregar seu perfil.');
       } finally {
@@ -87,8 +91,16 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      const nextUserId = nextSession?.user.id || '';
+      const isSameLoadedUser = Boolean(nextUserId) && nextUserId === loadedProfileUserId;
+
       setSession(nextSession);
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && isSameLoadedUser) {
+        setAuthLoading(false);
+        return;
+      }
+
       setAuthLoading(true);
       void loadProfile(nextSession);
     });
