@@ -406,7 +406,10 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                         aria-expanded={expanded}
                       >
                         <span>
-                          <strong>{request.hospital}</strong>
+                          <strong>
+                            <small>#{String(request.code).padStart(4, '0')}</small>
+                            {request.hospital}
+                          </strong>
                         </span>
                         <ChevronDown className={expanded ? 'expanded' : ''} size={18} />
                       </button>
