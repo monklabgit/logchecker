@@ -64,6 +64,7 @@ export type InventoryItem = {
 
 export type RequestItem = {
   id: string;
+  inventory_item_id: string | null;
   section: 'CME' | 'OPME' | 'OTHER';
   quantity: string;
   description: string;
