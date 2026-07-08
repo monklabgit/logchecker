@@ -766,6 +766,7 @@ select:focus {
 .new-request-view {
   display: grid;
   width: min(980px, 100%);
+  min-width: 0;
   gap: 16px;
   margin: 0 auto;
 }
@@ -792,11 +793,21 @@ select:focus {
 .request-source-card,
 .request-form-card,
 .request-section {
+  min-width: 0;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 8px 24px rgba(8, 42, 89, 0.06);
+}
+
+.request-section {
+  overflow: hidden;
+}
+
+.request-section .request-items,
+.request-section .inventory-search input {
+  min-width: 0;
 }
 
 .request-source-card {
@@ -946,7 +957,12 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  min-width: 0;
   margin-bottom: 14px;
+}
+
+.request-section-heading > div:first-child {
+  min-width: 0;
 }
 
 .request-section-heading p {
@@ -1016,7 +1032,8 @@ select:focus {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  min-width: min(520px, 100%);
+  min-width: 0;
+  width: min(520px, 100%);
 }
 
 .material-search-wrap > button {
@@ -1036,15 +1053,20 @@ select:focus {
 }
 
 .material-search {
+  min-width: 0;
   flex: 1 1 320px;
 }
 
 .material-suggestions {
   display: flex;
   gap: 8px;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   margin: -2px 0 12px;
   padding: 2px 1px 4px;
+  overscroll-behavior-inline: contain;
   scrollbar-width: none;
 }
 
