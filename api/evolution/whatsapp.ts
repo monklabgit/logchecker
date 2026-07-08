@@ -2,8 +2,13 @@ import { createClient } from '@supabase/supabase-js';
 
 const cleanBaseUrl = (value = '') => value.trim().replace(/\/+$/, '');
 const instancePrefix = () => (process.env.EVOLUTION_INSTANCE_PREFIX || 'logchecker').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'logchecker';
-const defaultGroupJid = process.env.LOGCHECKER_WHATSAPP_GROUP_JID || '120363426513754062@g.us';
-const defaultGroupName = process.env.LOGCHECKER_WHATSAPP_GROUP_NAME || 'MARJA - Rotina Mensal';
+const legacyGroupJid = '120363426513754062@g.us';
+const currentGroupJid = '120363211296860448@g.us';
+const currentGroupName = 'Marja logística Rio';
+const configuredGroupJid = (process.env.LOGCHECKER_WHATSAPP_GROUP_JID || '').trim();
+const configuredGroupName = (process.env.LOGCHECKER_WHATSAPP_GROUP_NAME || '').trim();
+const defaultGroupJid = !configuredGroupJid || configuredGroupJid === legacyGroupJid ? currentGroupJid : configuredGroupJid;
+const defaultGroupName = !configuredGroupName || configuredGroupJid === legacyGroupJid ? currentGroupName : configuredGroupName;
 const supabaseProjectUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://lkuggbejehlaxpoykwcs.supabase.co';
 const supabasePublishableKey =
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
@@ -225,7 +230,8 @@ export default async function handler(req: any, res: any) {
   };
 
   const ensureDefaultGroup = async (connection: { group_jid: string; group_name: string } | null) => {
-    if (!connection || (connection.group_jid && connection.group_name)) return connection;
+    if (!connection) return connection;
+    if (connection.group_jid === defaultGroupJid && connection.group_name === defaultGroupName) return connection;
     return updateConnection({
       group_jid: defaultGroupJid,
       group_name: defaultGroupName,
