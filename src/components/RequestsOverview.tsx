@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, X } from 'lucide-react';
+import { CalendarDays, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, UserRoundCheck, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
-import type { Hospital, Profile, RequestStatus, SurgeryRequest } from '../types';
+import type { Hospital, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
 import { RequestDetails } from './RequestDetails';
 
 type RequestsOverviewProps = {
@@ -98,16 +98,28 @@ const formFromRequest = (request: SurgeryRequest): EditForm => ({
   priority: String(request.priority || 2),
 });
 
+const getOpenAssignableTask = (request: SurgeryRequest) =>
+  request.transport_tasks
+    .filter((task) => ['available', 'assigned'].includes(task.status))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] || null;
+
 export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
   const [requests, setRequests] = useState<SurgeryRequest[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [drivers, setDrivers] = useState<Profile[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SurgeryRequest | null>(null);
   const [editingRequest, setEditingRequest] = useState<SurgeryRequest | null>(null);
+  const [assigningRequest, setAssigningRequest] = useState<SurgeryRequest | null>(null);
+  const [assigningTask, setAssigningTask] = useState<TransportTask | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [deleteRequestTarget, setDeleteRequestTarget] = useState<SurgeryRequest | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [cancellingId, setCancellingId] = useState('');
+  const [deletingId, setDeletingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
@@ -140,9 +152,20 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
     setHospitals((data || []) as Hospital[]);
   };
 
+  const loadDrivers = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, active')
+      .eq('role', 'driver')
+      .eq('active', true)
+      .order('full_name', { ascending: true });
+    setDrivers((data || []) as Profile[]);
+  };
+
   useEffect(() => {
     void loadRequests();
     void loadHospitals();
+    void loadDrivers();
 
     const channel = supabase
       .channel('requests-overview')
@@ -222,6 +245,46 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
       const next = current.filter((item) => item.id !== id);
       return next.length ? next : [makeEmptyItem()];
     });
+  };
+
+  const openAssignDriver = (request: SurgeryRequest) => {
+    const task = getOpenAssignableTask(request);
+    if (!task) return;
+    setNotice('');
+    setError('');
+    setAssigningRequest(request);
+    setAssigningTask(task);
+    setSelectedDriverId(task.assigned_driver_id || '');
+  };
+
+  const assignDriver = async () => {
+    if (!assigningRequest || !assigningTask || !selectedDriverId) {
+      setError('Selecione um motorista.');
+      return;
+    }
+
+    setAssigning(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const { error: assignError } = await supabase.rpc('assign_transport_task', {
+        target_task_id: assigningTask.id,
+        target_driver_id: selectedDriverId,
+        action_note: 'Designado pela operação',
+      });
+      if (assignError) throw assignError;
+
+      setNotice('Motorista designado.');
+      setAssigningRequest(null);
+      setAssigningTask(null);
+      setSelectedDriverId('');
+      await loadRequests(true);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível designar o motorista.');
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -309,8 +372,6 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
   };
 
   const cancelRequest = async (request: SurgeryRequest) => {
-    if (!window.confirm(`Cancelar a solicitação #${String(request.code).padStart(4, '0')}?`)) return;
-
     setCancellingId(request.id);
     setError('');
     setNotice('');
@@ -328,11 +389,34 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
       if (taskError) throw taskError;
 
       setNotice('Solicitação cancelada.');
+      setDeleteRequestTarget(null);
       await loadRequests(true);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível cancelar a solicitação.');
     } finally {
       setCancellingId('');
+    }
+  };
+
+  const deleteRequestPermanently = async (request: SurgeryRequest) => {
+    setDeletingId(request.id);
+    setError('');
+    setNotice('');
+
+    try {
+      const { error: deleteError } = await supabase.rpc('delete_surgery_request_permanently', {
+        target_request_id: request.id,
+      });
+      if (deleteError) throw deleteError;
+
+      setNotice('Solicitação excluída definitivamente e materiais retornados ao estoque.');
+      setDeleteRequestTarget(null);
+      setSelectedRequest((current) => (current?.id === request.id ? null : current));
+      await loadRequests(true);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível excluir a solicitação.');
+    } finally {
+      setDeletingId('');
     }
   };
 
@@ -394,6 +478,7 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
         ) : (
           <div className="overview-list">
             {filteredRequests.map((request) => {
+              const assignableTask = getOpenAssignableTask(request);
               const routeTask =
                 request.transport_tasks
                   .filter((task) => task.status === 'in_route' && task.type === (request.status === 'pickup_in_route' ? 'pickup' : 'delivery'))
@@ -426,6 +511,15 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
                     <small>Prioridade {priorityLabels[request.priority] || 'Normal'}</small>
                   </div>
                   <div className="overview-actions" aria-label="Ações da solicitação">
+                    <button
+                      type="button"
+                      onClick={() => openAssignDriver(request)}
+                      disabled={!assignableTask || !drivers.length || request.status === 'cancelled'}
+                      title="Designar motorista"
+                      aria-label="Designar motorista"
+                    >
+                      <UserRoundCheck size={16} />
+                    </button>
                     <button type="button" onClick={() => setSelectedRequest(request)} title="Ver detalhes" aria-label="Ver detalhes">
                       <Eye size={16} />
                     </button>
@@ -435,12 +529,12 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
                     <button
                       className="danger"
                       type="button"
-                      onClick={() => void cancelRequest(request)}
-                      disabled={request.status === 'cancelled' || cancellingId === request.id}
-                      title="Cancelar solicitação"
-                      aria-label="Cancelar solicitação"
+                      onClick={() => setDeleteRequestTarget(request)}
+                      disabled={cancellingId === request.id || deletingId === request.id}
+                      title="Cancelar ou excluir"
+                      aria-label="Cancelar ou excluir"
                     >
-                      {cancellingId === request.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                      {cancellingId === request.id || deletingId === request.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
                     </button>
                   </div>
                 </article>
@@ -465,6 +559,80 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
           onClose={() => setSelectedRequest(null)}
           onChanged={() => void loadRequests(true)}
         />
+      )}
+
+      {assigningRequest && assigningTask && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !assigning && setAssigningRequest(null)}>
+          <section className="action-modal" role="dialog" aria-modal="true" aria-labelledby="assign-driver-title">
+            <header>
+              <div>
+                <p className="eyebrow">Designar motorista</p>
+                <h2 id="assign-driver-title">#{String(assigningRequest.code).padStart(4, '0')} - {assigningRequest.hospital}</h2>
+                <span>{assigningTask.type === 'delivery' ? 'Entrega' : 'Retirada'}</span>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setAssigningRequest(null)} disabled={assigning} aria-label="Fechar designação">
+                <X size={20} />
+              </button>
+            </header>
+
+            <label>
+              <span>Motorista</span>
+              <select value={selectedDriverId} onChange={(event) => setSelectedDriverId(event.target.value)} autoFocus>
+                <option value="">Selecionar motorista</option>
+                {drivers.map((driver) => (
+                  <option value={driver.id} key={driver.id}>
+                    {driver.full_name || 'Motorista sem nome'}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {!drivers.length && <p className="auth-message warning">Nenhum motorista ativo encontrado.</p>}
+
+            <footer>
+              <button className="card-detail-button" type="button" onClick={() => setAssigningRequest(null)} disabled={assigning}>
+                Cancelar
+              </button>
+              <button className="card-action-button" type="button" onClick={() => void assignDriver()} disabled={assigning || !selectedDriverId}>
+                {assigning ? <LoaderCircle className="spin" size={16} /> : <UserRoundCheck size={16} />}
+                Designar
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {deleteRequestTarget && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !deletingId && !cancellingId && setDeleteRequestTarget(null)}>
+          <section className="action-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-request-title">
+            <header>
+              <div>
+                <p className="eyebrow">Ação da solicitação</p>
+                <h2 id="delete-request-title">#{String(deleteRequestTarget.code).padStart(4, '0')} - {deleteRequestTarget.hospital}</h2>
+                <span>Escolha se deseja apenas cancelar ou remover definitivamente.</span>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setDeleteRequestTarget(null)} disabled={Boolean(deletingId || cancellingId)} aria-label="Fechar ação">
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="danger-modal-copy">
+              <strong>Excluir definitivamente remove a solicitação e registros relacionados do banco.</strong>
+              <p>Antes de apagar, os materiais vinculados voltam para “No estoque”. Esta ação não aparece mais na lista.</p>
+            </div>
+
+            <footer>
+              <button className="card-detail-button" type="button" onClick={() => void cancelRequest(deleteRequestTarget)} disabled={Boolean(cancellingId || deletingId) || deleteRequestTarget.status === 'cancelled'}>
+                {cancellingId === deleteRequestTarget.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />}
+                Cancelar solicitação
+              </button>
+              <button className="danger-action-button" type="button" onClick={() => void deleteRequestPermanently(deleteRequestTarget)} disabled={Boolean(cancellingId || deletingId)}>
+                {deletingId === deleteRequestTarget.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                Excluir definitivamente
+              </button>
+            </footer>
+          </section>
+        </div>
       )}
 
       {editingRequest && editForm && (

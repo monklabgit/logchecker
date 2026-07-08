@@ -1618,6 +1618,82 @@ select:focus {
   font-size: 13px;
 }
 
+.action-modal {
+  display: grid;
+  width: min(460px, 100%);
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
+}
+
+.action-modal header,
+.action-modal footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.action-modal h2 {
+  margin-top: 3px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.action-modal header span,
+.danger-modal-copy p {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.action-modal footer {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.action-modal footer button {
+  min-height: 42px;
+  padding: 0 13px;
+  font-size: 13px;
+}
+
+.danger-modal-copy {
+  padding: 12px;
+  border: 1px solid #f0cac6;
+  border-radius: 9px;
+  background: #fff8f7;
+}
+
+.danger-modal-copy strong {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.danger-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.danger-action-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .evidence-modal {
   display: grid;
   width: min(460px, 100%);
@@ -4044,6 +4120,15 @@ select:focus {
   }
 
   .edit-request-modal > footer button {
+    width: 100%;
+  }
+
+  .action-modal footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .action-modal footer button {
     width: 100%;
   }
 
