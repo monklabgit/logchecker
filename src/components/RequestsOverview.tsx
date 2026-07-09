@@ -462,7 +462,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
             {access.create_requests && (
               <button className="overview-new-request-button" type="button" onClick={() => setCreatingRequest(true)}>
                 <ClipboardPlus size={16} />
-                Nova solicitaÃ§Ã£o
+                Nova solicitação
               </button>
             )}
             <label className="inventory-search">

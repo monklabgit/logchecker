@@ -2610,10 +2610,10 @@ select:focus {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid rgba(16, 167, 163, 0.35);
+  border: 1px solid var(--teal);
   border-radius: 8px;
-  background: rgba(16, 167, 163, 0.1);
-  color: var(--teal-dark);
+  background: var(--teal);
+  color: #fff;
   font-weight: 900;
 }
 

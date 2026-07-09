@@ -848,10 +848,10 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
       <section className="new-request-modal" role="dialog" aria-modal="true" aria-labelledby="new-request-title" onMouseDown={(event) => event.stopPropagation()}>
         <header>
           <div>
-            <p className="eyebrow">OperaÃ§Ã£o logÃ­stica</p>
-            <h2 id="new-request-title">Nova solicitaÃ§Ã£o</h2>
+            <p className="eyebrow">Operação logística</p>
+            <h2 id="new-request-title">Nova solicitação</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar nova solicitaÃ§Ã£o" disabled={saving || reading}>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar nova solicitação" disabled={saving || reading}>
             <X size={20} />
           </button>
         </header>
