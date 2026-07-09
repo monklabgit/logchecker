@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Archive, Building2, ClipboardPlus, ListChecks, LoaderCircle, LogOut, Menu, RefreshCw, Route, Settings, ShieldAlert, User, Users } from 'lucide-react';
+import { Archive, Building2, ListChecks, LoaderCircle, LogOut, Menu, RefreshCw, Route, Settings, ShieldAlert, User, Users } from 'lucide-react';
 import { AuthScreen } from './AuthScreen';
 import { HospitalsAdmin } from './components/HospitalsAdmin';
 import { InventoryAdmin } from './components/InventoryAdmin';
-import { NewRequestForm } from './components/NewRequestForm';
 import { OperationsDashboard } from './components/OperationsDashboard';
 import { RequestsOverview } from './components/RequestsOverview';
 import { UserSettingsModal } from './components/UserSettingsModal';
@@ -13,7 +12,7 @@ import { DEFAULT_ROLE_ACCESS, emptyAccessMap } from './permissions';
 import { supabase } from './supabase';
 import type { Profile, RoleAccessScope } from './types';
 
-type AppView = 'flow' | 'requests' | 'new-request' | 'inventory' | 'hospitals' | 'users';
+type AppView = 'flow' | 'requests' | 'inventory' | 'hospitals' | 'users';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -162,9 +161,8 @@ function App() {
     if (!profile || !profile.active || profile.role === 'pending') return;
 
     const access = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
-    const canFlow = access.view_dashboard && ['driver', 'instrumentator'].includes(profile.role);
+    const canFlow = access.view_dashboard;
     const canRequests = ['admin', 'office'].includes(profile.role);
-    const canCreate = access.create_requests;
     const canInventory = access.manage_inventory;
     const canHospitals = access.manage_hospitals;
     const canUsers = profile.role === 'admin' || access.manage_users;
@@ -172,14 +170,13 @@ function App() {
     const allowed =
       (view === 'flow' && canFlow) ||
       (view === 'requests' && canRequests) ||
-      (view === 'new-request' && canCreate) ||
       (view === 'inventory' && canInventory) ||
       (view === 'hospitals' && canHospitals) ||
       (view === 'users' && canUsers);
 
     if (allowed) return;
 
-    setView(canRequests ? 'requests' : canFlow ? 'flow' : canCreate ? 'new-request' : canInventory ? 'inventory' : canHospitals ? 'hospitals' : 'users');
+    setView(canRequests ? 'requests' : canFlow ? 'flow' : canInventory ? 'inventory' : canHospitals ? 'hospitals' : 'users');
   }, [profile, roleAccess, view]);
 
   const signOut = async () => {
@@ -234,9 +231,8 @@ function App() {
   }
 
   const currentAccess = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
-  const canViewFlow = currentAccess.view_dashboard && ['driver', 'instrumentator'].includes(profile.role);
+  const canViewFlow = currentAccess.view_dashboard;
   const canViewRequests = ['admin', 'office'].includes(profile.role);
-  const canCreateRequest = currentAccess.create_requests;
   const canManageInventory = currentAccess.manage_inventory;
   const canManageHospitals = currentAccess.manage_hospitals;
   const canManageUsers = profile.role === 'admin' || currentAccess.manage_users;
@@ -258,12 +254,6 @@ function App() {
             <button className={view === 'requests' ? 'active' : ''} type="button" onClick={() => setView('requests')}>
               <ListChecks size={18} />
               <span>Solicitações</span>
-            </button>
-          )}
-          {canCreateRequest && (
-            <button className={view === 'new-request' ? 'active' : ''} type="button" onClick={() => setView('new-request')}>
-              <ClipboardPlus size={18} />
-              <span>Nova solicitação</span>
             </button>
           )}
           {canManageInventory && (
@@ -362,8 +352,7 @@ function App() {
           refreshKey={dashboardRefreshKey}
         />
       )}
-      {view === 'requests' && <RequestsOverview profile={profile} access={currentAccess} />}
-      {view === 'new-request' && <NewRequestForm onSaved={handleSaved} />}
+      {view === 'requests' && <RequestsOverview profile={profile} access={currentAccess} onRequestCreated={handleSaved} />}
       {view === 'inventory' && <InventoryAdmin />}
       {view === 'hospitals' && <HospitalsAdmin />}
       {view === 'users' && <UsersAdmin />}

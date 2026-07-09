@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, UserRoundCheck, X } from 'lucide-react';
+import { CalendarDays, ClipboardPlus, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, UserRoundCheck, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { Hospital, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
+import { NewRequestForm } from './NewRequestForm';
 import { RequestDetails } from './RequestDetails';
 
 type RequestsOverviewProps = {
   profile: Profile;
   access: RoleAccess;
+  onRequestCreated?: (requestId: string) => void;
 };
 
 type PeriodFilter = 'all' | 'today' | 'week' | 'month';
@@ -103,11 +105,12 @@ const getOpenAssignableTask = (request: SurgeryRequest) =>
     .filter((task) => ['available', 'assigned'].includes(task.status))
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] || null;
 
-export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
+export function RequestsOverview({ profile, access, onRequestCreated }: RequestsOverviewProps) {
   const [requests, setRequests] = useState<SurgeryRequest[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [drivers, setDrivers] = useState<Profile[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SurgeryRequest | null>(null);
+  const [creatingRequest, setCreatingRequest] = useState(false);
   const [editingRequest, setEditingRequest] = useState<SurgeryRequest | null>(null);
   const [assigningRequest, setAssigningRequest] = useState<SurgeryRequest | null>(null);
   const [assigningTask, setAssigningTask] = useState<TransportTask | null>(null);
@@ -125,6 +128,13 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
   const [search, setSearch] = useState('');
   const [period, setPeriod] = useState<PeriodFilter>('week');
   const [statusFilter, setStatusFilter] = useState<'all' | RequestStatus>('all');
+
+  const handleRequestCreated = async (requestId: string) => {
+    setCreatingRequest(false);
+    setNotice('SolicitaÃ§Ã£o salva com sucesso e disponÃ­vel para entrega.');
+    onRequestCreated?.(requestId);
+    await loadRequests(true);
+  };
 
   const loadRequests = async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -449,6 +459,12 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
             <h2>Lista de solicitações</h2>
           </div>
           <div className="overview-filters">
+            {access.create_requests && (
+              <button className="overview-new-request-button" type="button" onClick={() => setCreatingRequest(true)}>
+                <ClipboardPlus size={16} />
+                Nova solicitaÃ§Ã£o
+              </button>
+            )}
             <label className="inventory-search">
               <Search size={15} />
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar hospital, paciente ou material..." />
@@ -558,6 +574,14 @@ export function RequestsOverview({ profile, access }: RequestsOverviewProps) {
           request={selectedRequest}
           onClose={() => setSelectedRequest(null)}
           onChanged={() => void loadRequests(true)}
+        />
+      )}
+
+      {creatingRequest && (
+        <NewRequestForm
+          modal
+          onClose={() => setCreatingRequest(false)}
+          onSaved={(requestId) => void handleRequestCreated(requestId)}
         />
       )}
 

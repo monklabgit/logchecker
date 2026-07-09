@@ -45,6 +45,8 @@ type ExtractionResult = {
 
 type NewRequestFormProps = {
   onSaved: (requestId: string) => void;
+  modal?: boolean;
+  onClose?: () => void;
 };
 
 const initialForm: RequestForm = {
@@ -191,7 +193,7 @@ const findInventoryMatch = (items: InventoryItem[], section: SectionName, descri
   );
 };
 
-export function NewRequestForm({ onSaved }: NewRequestFormProps) {
+export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFormProps) {
   const [form, setForm] = useState<RequestForm>(initialForm);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
@@ -681,7 +683,7 @@ export function NewRequestForm({ onSaved }: NewRequestFormProps) {
     );
   };
 
-  return (
+  const formContent = (
     <section className="new-request-view">
       <header className="page-heading">
         <div>
@@ -837,5 +839,24 @@ export function NewRequestForm({ onSaved }: NewRequestFormProps) {
         </div>
       )}
     </section>
+  );
+
+  if (!modal) return formContent;
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="new-request-modal" role="dialog" aria-modal="true" aria-labelledby="new-request-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <div>
+            <p className="eyebrow">OperaÃ§Ã£o logÃ­stica</p>
+            <h2 id="new-request-title">Nova solicitaÃ§Ã£o</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar nova solicitaÃ§Ã£o" disabled={saving || reading}>
+            <X size={20} />
+          </button>
+        </header>
+        <div className="new-request-modal-body">{formContent}</div>
+      </section>
+    </div>
   );
 }

@@ -2604,6 +2604,19 @@ select:focus {
   min-width: 150px;
 }
 
+.overview-new-request-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(16, 167, 163, 0.35);
+  border-radius: 8px;
+  background: rgba(16, 167, 163, 0.1);
+  color: var(--teal-dark);
+  font-weight: 900;
+}
+
 .overview-list {
   display: grid;
   gap: 10px;
@@ -2755,6 +2768,45 @@ select:focus {
 .edit-request-modal h2 {
   margin-top: 3px;
   font-size: 22px;
+}
+
+.new-request-modal {
+  display: grid;
+  width: min(1040px, calc(100vw - 28px));
+  max-height: min(92vh, 920px);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 14px;
+  background: #f3f8fb;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
+}
+
+.new-request-modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.new-request-modal h2 {
+  margin-top: 3px;
+  font-size: 22px;
+}
+
+.new-request-modal-body {
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.new-request-modal .new-request-view {
+  width: 100%;
+}
+
+.new-request-modal .new-request-view > .page-heading {
+  display: none;
 }
 
 .edit-request-body {
