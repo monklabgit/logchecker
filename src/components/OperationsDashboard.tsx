@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Box,
@@ -21,6 +21,7 @@ import {
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhotoType, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
+import { optimizeEvidencePhoto } from '../imageOptimization';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
 import { RequestDetails } from './RequestDetails';
@@ -33,10 +34,10 @@ type OperationsDashboardProps = {
 };
 
 const columns: Array<{ status: RequestStatus; label: string; tone: string; icon: typeof Box }> = [
-  { status: 'ready_delivery', label: 'Disponível para entrega', tone: 'blue', icon: Box },
+  { status: 'ready_delivery', label: 'DisponÃ­vel para entrega', tone: 'blue', icon: Box },
   { status: 'delivery_in_route', label: 'Em rota de entrega', tone: 'amber', icon: Truck },
   { status: 'delivered', label: 'Entregue', tone: 'green', icon: CheckCircle2 },
-  { status: 'ready_pickup', label: 'Disponível para retirada', tone: 'purple', icon: PackageCheck },
+  { status: 'ready_pickup', label: 'DisponÃ­vel para retirada', tone: 'purple', icon: PackageCheck },
   { status: 'pickup_in_route', label: 'Em rota de retirada', tone: 'amber', icon: Truck },
   { status: 'returned_stock', label: 'Retornado ao estoque', tone: 'slate', icon: PackageCheck },
 ];
@@ -220,13 +221,14 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     void runTaskAction(task, action);
   };
 
-  const addEvidencePhotos = (files: File[]) => {
+  const addEvidencePhotos = async (files: File[]) => {
     const selectedFiles = files.filter((file) => file.type.startsWith('image/'));
     if (!selectedFiles.length) return;
     setEvidenceError('');
+    const optimizedFiles = await Promise.all(selectedFiles.map((file) => optimizeEvidencePhoto(file)));
     setEvidencePhotos((current) => [
       ...current,
-      ...selectedFiles.map((file) => ({
+      ...optimizedFiles.map((file) => ({
         id: crypto.randomUUID(),
         file,
         previewUrl: URL.createObjectURL(file),
@@ -263,7 +265,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
 
     try {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Sessão expirada. Entre novamente para enviar a foto.');
+      if (!userData.user) throw new Error('SessÃ£o expirada. Entre novamente para enviar a foto.');
 
       const evidenceRows = [];
       for (const photo of evidencePhotos) {
@@ -312,7 +314,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       setEvidencePhotos([]);
       await loadRequests(true);
     } catch (caughtError) {
-      setEvidenceError(caughtError instanceof Error ? caughtError.message : 'Não foi possível enviar a foto.');
+      setEvidenceError(caughtError instanceof Error ? caughtError.message : 'NÃ£o foi possÃ­vel enviar a foto.');
     } finally {
       setEvidenceUploading(false);
       setActingTaskId('');
@@ -341,7 +343,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     return (
       <div className="dashboard-loading">
         <LoaderCircle className="spin" size={28} />
-        <span>Carregando operação...</span>
+        <span>Carregando operaÃ§Ã£o...</span>
       </div>
     );
   }
@@ -417,7 +419,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                       {expanded && (
                         <>
                           <div className="operation-card-subtitle">
-                            <p>{request.procedure || 'Procedimento não informado'}</p>
+                            <p>{request.procedure || 'Procedimento nÃ£o informado'}</p>
                             <span className="item-count">
                               <Box size={14} />
                               {request.request_items.length}
@@ -440,7 +442,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                                 </dt>
                                 <dd>
                                   {dateFormatter.format(new Date(`${request.surgery_date}T12:00:00`))}
-                                  {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
+                                  {request.surgery_time ? ` Â· ${request.surgery_time.slice(0, 5)}` : ''}
                                 </dd>
                               </div>
                             )}
@@ -502,7 +504,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                 {!groupedRequests[column.status].length && (
                   <div className="empty-column">
                     <CheckCircle2 size={22} />
-                    <span>Nenhuma solicitação</span>
+                    <span>Nenhuma solicitaÃ§Ã£o</span>
                   </div>
                 )}
               </div>
@@ -526,12 +528,12 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
           <section className="navigation-modal" role="dialog" aria-modal="true" aria-labelledby="navigation-title">
             <header>
               <div>
-                <p className="eyebrow">Navegação</p>
+                <p className="eyebrow">NavegaÃ§Ã£o</p>
                 <h2 id="navigation-title">{navigationTarget.title}</h2>
                 <span>{navigationTarget.query}</span>
               </div>
-              <button className="icon-button" type="button" onClick={() => setNavigationTarget(null)} aria-label="Fechar navegação">
-                ×
+              <button className="icon-button" type="button" onClick={() => setNavigationTarget(null)} aria-label="Fechar navegaÃ§Ã£o">
+                Ã—
               </button>
             </header>
             <div className="navigation-modal-actions">
@@ -553,13 +555,13 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
           <section className="evidence-modal" role="dialog" aria-modal="true" aria-labelledby="evidence-title" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <p className="eyebrow">Evidência obrigatória</p>
+                <p className="eyebrow">EvidÃªncia obrigatÃ³ria</p>
                 <h2 id="evidence-title">
                   {photoPrompt.photoType === 'delivery' ? 'Foto da entrega' : 'Foto da retirada'}
                 </h2>
                 <span>{photoPrompt.request.hospital}</span>
               </div>
-              <button className="icon-button" type="button" onClick={closePhotoPrompt} aria-label="Fechar evidência">
+              <button className="icon-button" type="button" onClick={closePhotoPrompt} aria-label="Fechar evidÃªncia">
                 <X size={20} />
               </button>
             </header>
@@ -583,3 +585,4 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     </section>
   );
 }
+
