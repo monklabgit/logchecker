@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
@@ -16,19 +16,19 @@ type RequestDetailsProps = {
 };
 
 const statusLabels = {
-  available: 'DisponÃ­vel',
+  available: 'Disponível',
   assigned: 'Assumida',
   in_route: 'Em rota',
-  completed: 'ConcluÃ­da',
+  completed: 'Concluída',
   cancelled: 'Cancelada',
 };
 
 const actionLabels = {
-  created: 'SolicitaÃ§Ã£o criada',
-  claimed: 'SolicitaÃ§Ã£o assumida',
+  created: 'Solicitação criada',
+  claimed: 'Solicitação assumida',
   started: 'Rota iniciada',
-  completed: 'MovimentaÃ§Ã£o concluÃ­da',
-  cancelled: 'SolicitaÃ§Ã£o cancelada',
+  completed: 'Movimentação concluída',
+  cancelled: 'Solicitação cancelada',
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -36,7 +36,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short',
 const photoTypeLabels = {
   delivery: 'Entrega',
   pickup: 'Retirada',
-  instrumentator_release: 'LiberaÃ§Ã£o',
+  instrumentator_release: 'Liberação',
 };
 
 export function RequestDetails({ profile, access, request, onClose, onChanged }: RequestDetailsProps) {
@@ -122,7 +122,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
 
     try {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('SessÃ£o expirada. Entre novamente para enviar a foto.');
+      if (!userData.user) throw new Error('Sessão expirada. Entre novamente para enviar a foto.');
 
       const evidenceRows = [];
       for (const photo of releasePhotos) {
@@ -165,7 +165,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
       onChanged();
       onClose();
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'NÃ£o foi possÃ­vel liberar para retirada.');
+      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível liberar para retirada.');
     } finally {
       setReleasing(false);
     }
@@ -185,7 +185,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
                 </button>
               )}
             </div>
-            <p>{request.procedure || 'Procedimento nÃ£o informado'}</p>
+            <p>{request.procedure || 'Procedimento não informado'}</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar detalhes">
             <X size={20} />
@@ -194,23 +194,23 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
 
         <div className="details-body">
           <section className="details-summary">
-            <h3>Dados da solicitaÃ§Ã£o</h3>
+            <h3>Dados da solicitação</h3>
             <dl className="compact-details-list">
               <div>
                 <dt><UserRound size={15} /> Paciente</dt>
-                <dd>{request.patient || 'NÃ£o informado'}</dd>
+                <dd>{request.patient || 'Não informado'}</dd>
               </div>
               <div>
-                <dt><UserRound size={15} /> CirurgiÃ£o</dt>
-                <dd>{request.surgeon || 'NÃ£o informado'}</dd>
+                <dt><UserRound size={15} /> Cirurgião</dt>
+                <dd>{request.surgeon || 'Não informado'}</dd>
               </div>
               <div>
                 <dt><CalendarDays size={15} /> Cirurgia</dt>
                 <dd>
                   {request.surgery_date
                     ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${request.surgery_date}T12:00:00`))
-                    : 'NÃ£o informada'}
-                  {request.surgery_time ? ` Â· ${request.surgery_time.slice(0, 5)}` : ''}
+                    : 'Não informada'}
+                  {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
                 </dd>
               </div>
             </dl>
@@ -226,7 +226,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
                   <h4>{section === 'OTHER' ? 'OUTROS' : section}</h4>
                   {sectionItems.map((item) => (
                     <div className="material-line" key={item.id}>
-                      <strong>{item.quantity || 'â€”'}</strong>
+                      <strong>{item.quantity || '-'}</strong>
                       <span>{item.description}</span>
                       <small>{item.note}</small>
                     </div>
@@ -234,12 +234,12 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
                 </div>
               );
             })}
-            {request.observation && <p className="surgery-observation"><strong>ObservaÃ§Ã£o da cirurgia:</strong> {request.observation}</p>}
+            {request.observation && <p className="surgery-observation"><strong>Observação da cirurgia:</strong> {request.observation}</p>}
           </section>
 
           <section className="details-history">
             <button className="details-history-toggle" type="button" onClick={() => setHistoryOpen((current) => !current)} aria-expanded={historyOpen}>
-              <span><History size={18} /> HistÃ³rico</span>
+              <span><History size={18} /> Histórico</span>
               <span>
                 {loadingEvents ? 'Carregando' : `${events.length} evento${events.length === 1 ? '' : 's'}`}
                 {loadingEvents ? <LoaderCircle className="spin" size={17} /> : <ChevronDown className={historyOpen ? 'expanded' : ''} size={18} />}
@@ -254,14 +254,14 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
                         <strong className="history-action">
                           <span>{actionLabels[event.action]}</span>
                           <em>por</em>
-                          <span>{event.actor?.full_name || (event.actor_id ? 'UsuÃ¡rio sem nome' : 'UsuÃ¡rio nÃ£o registrado')}</span>
+                          <span>{event.actor?.full_name || (event.actor_id ? 'Usuário sem nome' : 'Usuário não registrado')}</span>
                         </strong>
                         <p>
-                          {event.from_status ? `${statusLabels[event.from_status]} â†’ ` : ''}
+                          {event.from_status ? `${statusLabels[event.from_status]} -> ` : ''}
                           {statusLabels[event.to_status]}
                         </p>
                         <span className="history-actor">
-                          {event.actor?.full_name || (event.actor_id ? 'UsuÃ¡rio sem nome' : 'UsuÃ¡rio nÃ£o registrado')}
+                          {event.actor?.full_name || (event.actor_id ? 'Usuário sem nome' : 'Usuário não registrado')}
                         </span>
                         <time dateTime={event.created_at}>{dateTimeFormatter.format(new Date(event.created_at))}</time>
                       </div>
@@ -273,7 +273,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
 
           {signedPhotos.length > 0 && (
             <section className="details-evidence">
-              <h3><ImageIcon size={18} /> EvidÃªncias fotogrÃ¡ficas</h3>
+              <h3><ImageIcon size={18} /> Evidências fotográficas</h3>
               <div className="evidence-grid">
                 {signedPhotos.map((photo) => (
                   <a href={photo.signedUrl} target="_blank" rel="noreferrer" key={photo.id}>
@@ -315,32 +315,32 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
               </header>
               <dl>
                 <div>
-                  <dt>EndereÃ§o</dt>
-                  <dd>{request.hospital_record.address || 'NÃ£o informado'}</dd>
+                  <dt>Endereço</dt>
+                  <dd>{request.hospital_record.address || 'Não informado'}</dd>
                 </div>
                 <div>
                   <dt>Busca no mapa</dt>
-                  <dd>{request.hospital_record.maps_query || 'NÃ£o informado'}</dd>
+                  <dd>{request.hospital_record.maps_query || 'Não informado'}</dd>
                 </div>
                 <div>
                   <dt>Acesso / carga e descarga</dt>
-                  <dd>{request.hospital_record.loading_access || 'NÃ£o informado'}</dd>
+                  <dd>{request.hospital_record.loading_access || 'Não informado'}</dd>
                 </div>
                 <div>
                   <dt>CME</dt>
-                  <dd>{request.hospital_record.cme_location || 'NÃ£o informado'}</dd>
+                  <dd>{request.hospital_record.cme_location || 'Não informado'}</dd>
                 </div>
                 <div>
                   <dt>OPME</dt>
-                  <dd>{request.hospital_record.opme_location || 'NÃ£o informado'}</dd>
+                  <dd>{request.hospital_record.opme_location || 'Não informado'}</dd>
                 </div>
                 <div>
-                  <dt>Centro cirÃºrgico</dt>
-                  <dd>{request.hospital_record.surgical_center_location || 'NÃ£o informado'}</dd>
+                  <dt>Centro cirúrgico</dt>
+                  <dd>{request.hospital_record.surgical_center_location || 'Não informado'}</dd>
                 </div>
                 <div>
-                  <dt>Dicas / observaÃ§Ãµes</dt>
-                  <dd>{request.hospital_record.notes || 'NÃ£o informado'}</dd>
+                  <dt>Dicas / observações</dt>
+                  <dd>{request.hospital_record.notes || 'Não informado'}</dd>
                 </div>
               </dl>
             </section>

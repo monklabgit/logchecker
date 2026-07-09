@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Box,
@@ -34,10 +34,10 @@ type OperationsDashboardProps = {
 };
 
 const columns: Array<{ status: RequestStatus; label: string; tone: string; icon: typeof Box }> = [
-  { status: 'ready_delivery', label: 'DisponÃ­vel para entrega', tone: 'blue', icon: Box },
+  { status: 'ready_delivery', label: 'Disponível para entrega', tone: 'blue', icon: Box },
   { status: 'delivery_in_route', label: 'Em rota de entrega', tone: 'amber', icon: Truck },
   { status: 'delivered', label: 'Entregue', tone: 'green', icon: CheckCircle2 },
-  { status: 'ready_pickup', label: 'DisponÃ­vel para retirada', tone: 'purple', icon: PackageCheck },
+  { status: 'ready_pickup', label: 'Disponível para retirada', tone: 'purple', icon: PackageCheck },
   { status: 'pickup_in_route', label: 'Em rota de retirada', tone: 'amber', icon: Truck },
   { status: 'returned_stock', label: 'Retornado ao estoque', tone: 'slate', icon: PackageCheck },
 ];
@@ -265,7 +265,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
 
     try {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('SessÃ£o expirada. Entre novamente para enviar a foto.');
+      if (!userData.user) throw new Error('Sessão expirada. Entre novamente para enviar a foto.');
 
       const evidenceRows = [];
       for (const photo of evidencePhotos) {
@@ -314,7 +314,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       setEvidencePhotos([]);
       await loadRequests(true);
     } catch (caughtError) {
-      setEvidenceError(caughtError instanceof Error ? caughtError.message : 'NÃ£o foi possÃ­vel enviar a foto.');
+      setEvidenceError(caughtError instanceof Error ? caughtError.message : 'Não foi possível enviar a foto.');
     } finally {
       setEvidenceUploading(false);
       setActingTaskId('');
@@ -343,7 +343,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     return (
       <div className="dashboard-loading">
         <LoaderCircle className="spin" size={28} />
-        <span>Carregando operaÃ§Ã£o...</span>
+        <span>Carregando operação...</span>
       </div>
     );
   }
@@ -419,7 +419,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                       {expanded && (
                         <>
                           <div className="operation-card-subtitle">
-                            <p>{request.procedure || 'Procedimento nÃ£o informado'}</p>
+                            <p>{request.procedure || 'Procedimento não informado'}</p>
                             <span className="item-count">
                               <Box size={14} />
                               {request.request_items.length}
@@ -442,7 +442,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                                 </dt>
                                 <dd>
                                   {dateFormatter.format(new Date(`${request.surgery_date}T12:00:00`))}
-                                  {request.surgery_time ? ` Â· ${request.surgery_time.slice(0, 5)}` : ''}
+                                  {request.surgery_time ? ` · ${request.surgery_time.slice(0, 5)}` : ''}
                                 </dd>
                               </div>
                             )}
@@ -504,7 +504,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                 {!groupedRequests[column.status].length && (
                   <div className="empty-column">
                     <CheckCircle2 size={22} />
-                    <span>Nenhuma solicitaÃ§Ã£o</span>
+                    <span>Nenhuma solicitação</span>
                   </div>
                 )}
               </div>
@@ -528,12 +528,12 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
           <section className="navigation-modal" role="dialog" aria-modal="true" aria-labelledby="navigation-title">
             <header>
               <div>
-                <p className="eyebrow">NavegaÃ§Ã£o</p>
+                <p className="eyebrow">Navegação</p>
                 <h2 id="navigation-title">{navigationTarget.title}</h2>
                 <span>{navigationTarget.query}</span>
               </div>
-              <button className="icon-button" type="button" onClick={() => setNavigationTarget(null)} aria-label="Fechar navegaÃ§Ã£o">
-                Ã—
+              <button className="icon-button" type="button" onClick={() => setNavigationTarget(null)} aria-label="Fechar navegação">
+                ×
               </button>
             </header>
             <div className="navigation-modal-actions">
@@ -555,13 +555,13 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
           <section className="evidence-modal" role="dialog" aria-modal="true" aria-labelledby="evidence-title" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <p className="eyebrow">EvidÃªncia obrigatÃ³ria</p>
+                <p className="eyebrow">Evidência obrigatória</p>
                 <h2 id="evidence-title">
                   {photoPrompt.photoType === 'delivery' ? 'Foto da entrega' : 'Foto da retirada'}
                 </h2>
                 <span>{photoPrompt.request.hospital}</span>
               </div>
-              <button className="icon-button" type="button" onClick={closePhotoPrompt} aria-label="Fechar evidÃªncia">
+              <button className="icon-button" type="button" onClick={closePhotoPrompt} aria-label="Fechar evidência">
                 <X size={20} />
               </button>
             </header>

@@ -131,7 +131,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
 
   const handleRequestCreated = async (requestId: string) => {
     setCreatingRequest(false);
-    setNotice('SolicitaÃ§Ã£o salva com sucesso e disponÃ­vel para entrega.');
+    setNotice('Solicitação salva com sucesso e disponível para entrega.');
     onRequestCreated?.(requestId);
     await loadRequests(true);
   };
@@ -642,7 +642,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
 
             <div className="danger-modal-copy">
               <strong>Excluir definitivamente remove a solicitação e registros relacionados do banco.</strong>
-              <p>Antes de apagar, os materiais vinculados voltam para “No estoque”. Esta ação não aparece mais na lista.</p>
+              <p>Antes de apagar, os materiais vinculados voltam para "No estoque". Esta ação não aparece mais na lista.</p>
             </div>
 
             <footer>
