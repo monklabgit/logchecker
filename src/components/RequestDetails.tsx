@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, UserRound, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Save, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
-import { optimizeEvidencePhoto } from '../imageOptimization';
+import { usePersistedEvidence } from '../usePersistedEvidence';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
 
@@ -44,10 +44,15 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
   const [signedPhotos, setSignedPhotos] = useState<Array<EvidencePhoto & { signedUrl: string }>>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [releasing, setReleasing] = useState(false);
-  const [releasePhotos, setReleasePhotos] = useState<Array<{ id: string; file: File; previewUrl: string }>>([]);
   const [hospitalDetailsOpen, setHospitalDetailsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState('');
+  const [releaseSavedMessage, setReleaseSavedMessage] = useState('');
+  const releaseEvidence = usePersistedEvidence({
+    requestId: request.id,
+    taskId: null,
+    photoType: 'instrumentator_release',
+  });
 
   useEffect(() => {
     let active = true;
@@ -71,7 +76,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
 
   useEffect(() => {
     let active = true;
-    const photos = (request.transport_evidence_photos || []).filter((photo) => new Date(photo.expires_at) > new Date());
+    const photos = (request.transport_evidence_photos || []).filter((photo) => photo.finalized_at && new Date(photo.expires_at) > new Date());
 
     Promise.all(
       photos.map(async (photo) => {
@@ -87,85 +92,60 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
     };
   }, [request.transport_evidence_photos]);
 
-  const addReleasePhotos = async (files: File[]) => {
-    const selectedFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (!selectedFiles.length) return;
-    setError('');
-    const optimizedFiles = await Promise.all(selectedFiles.map((file) => optimizeEvidencePhoto(file)));
-    setReleasePhotos((current) => [
-      ...current,
-      ...optimizedFiles.map((file) => ({
-        id: crypto.randomUUID(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-      })),
-    ]);
+  const closeSafely = () => {
+    if (
+      releaseEvidence.hasPending &&
+      !window.confirm('Existem fotos que ainda não foram salvas. Deseja fechar e descartá-las?')
+    ) {
+      return;
+    }
+    onClose();
   };
 
-  const removeReleasePhoto = (photoId: string) => {
-    setReleasePhotos((current) => {
-      const photo = current.find((item) => item.id === photoId);
-      if (photo) URL.revokeObjectURL(photo.previewUrl);
-      return current.filter((item) => item.id !== photoId);
-    });
-  };
-
-  const releasePickup = async () => {
-    if (!releasePhotos.length) {
-      setError('Anexe pelo menos uma foto do material liberado para retirada.');
+  const saveReleasePhotos = async () => {
+    setReleaseSavedMessage('');
+    if (!releaseEvidence.hasPending) {
+      releaseEvidence.setError(releaseEvidence.savedPhotos.length ? 'Todas as fotos já estão salvas.' : 'Adicione pelo menos uma foto.');
       return;
     }
 
+    const result = await releaseEvidence.savePending();
+    if (!result.failed) {
+      setReleaseSavedMessage('Fotos salvas. Você pode fechar e continuar depois.');
+      onChanged();
+    }
+  };
+
+  const releasePickup = async () => {
     setReleasing(true);
-    setError('');
-    const uploadedPaths: string[] = [];
+    setReleaseSavedMessage('');
+    releaseEvidence.setError('');
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Sessão expirada. Entre novamente para enviar a foto.');
-
-      const evidenceRows = [];
-      for (const photo of releasePhotos) {
-        const extension = photo.file.name.split('.').pop() || 'jpg';
-        const storagePath = `${request.id}/instrumentator_release/${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from('transport-evidence-photos')
-          .upload(storagePath, photo.file, { contentType: photo.file.type || 'image/jpeg', upsert: false });
-        if (uploadError) throw uploadError;
-        uploadedPaths.push(storagePath);
-        evidenceRows.push({
-          request_id: request.id,
-          task_id: null,
-          photo_type: 'instrumentator_release',
-          storage_path: storagePath,
-          original_name: photo.file.name,
-          mime_type: photo.file.type,
-          uploaded_by: userData.user.id,
-        });
+      const result = await releaseEvidence.savePending();
+      if (result.failed) return;
+      if (!result.photos.length) {
+        releaseEvidence.setError('Salve pelo menos uma foto do material liberado para retirada.');
+        return;
       }
 
-      const { error: evidenceError } = await supabase.from('transport_evidence_photos').insert(evidenceRows);
-
-      if (evidenceError) {
-        await supabase.storage.from('transport-evidence-photos').remove(uploadedPaths);
-        throw evidenceError;
-      }
-
-      const { error: releaseError } = await supabase.rpc('release_request_for_pickup', {
+      const { error: releaseError } = await supabase.rpc('release_request_for_pickup_with_evidence', {
         target_request_id: request.id,
       });
       if (releaseError) throw releaseError;
 
-      notifyWhatsAppOperation(request.id, 'release_completed', uploadedPaths).catch((notificationError) => {
+      notifyWhatsAppOperation(
+        request.id,
+        'release_completed',
+        result.photos.map((photo) => photo.storage_path)
+      ).catch((notificationError) => {
         console.error('WhatsApp notification failed', notificationError);
       });
 
-      releasePhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-      setReleasePhotos([]);
       onChanged();
       onClose();
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível liberar para retirada.');
+      releaseEvidence.setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível liberar para retirada.');
     } finally {
       setReleasing(false);
     }
@@ -187,7 +167,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             </div>
             <p>{request.procedure || 'Procedimento não informado'}</p>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar detalhes">
+          <button className="icon-button" type="button" onClick={closeSafely} aria-label="Fechar detalhes">
             <X size={20} />
           </button>
         </header>
@@ -291,9 +271,33 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
 
         {request.status === 'delivered' && ['admin', 'office', 'instrumentator'].includes(profile.role) && access.release_materials && (
           <footer className="details-footer release-footer">
-            <EvidencePhotoPicker photos={releasePhotos} onAddFiles={addReleasePhotos} onRemove={removeReleasePhoto} />
+            {releaseEvidence.loading ? (
+              <div className="evidence-loading"><LoaderCircle className="spin" size={20} /> Carregando fotos salvas...</div>
+            ) : (
+              <EvidencePhotoPicker
+                photos={releaseEvidence.pickerPhotos}
+                onAddFiles={releaseEvidence.addFiles}
+                onRemove={(id) => void releaseEvidence.removePhoto(id)}
+              />
+            )}
+            {releaseSavedMessage && <p className="auth-message success">{releaseSavedMessage}</p>}
+            {releaseEvidence.error && <p className="auth-message error">{releaseEvidence.error}</p>}
             <div className="release-actions">
-              <button className="card-action-button" type="button" onClick={() => void releasePickup()} disabled={releasing}>
+              <button
+                className="evidence-save-button"
+                type="button"
+                onClick={() => void saveReleasePhotos()}
+                disabled={releasing || releaseEvidence.uploading || releaseEvidence.loading}
+              >
+                {releaseEvidence.uploading ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+                Salvar fotos
+              </button>
+              <button
+                className="card-action-button"
+                type="button"
+                onClick={() => void releasePickup()}
+                disabled={releasing || releaseEvidence.uploading || releaseEvidence.loading}
+              >
                 {releasing ? <LoaderCircle className="spin" size={17} /> : <PackageOpen size={17} />}
                 Liberar para retirada
               </button>

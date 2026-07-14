@@ -20,10 +20,8 @@ import {
 } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
-import type { EvidencePhotoType, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
-import { optimizeEvidencePhoto } from '../imageOptimization';
-import { notifyWhatsAppOperation } from '../whatsappNotifications';
-import { EvidencePhotoPicker } from './EvidencePhotoPicker';
+import type { Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
+import { EvidenceDraftModal } from './EvidenceDraftModal';
 import { RequestDetails } from './RequestDetails';
 
 type OperationsDashboardProps = {
@@ -99,15 +97,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [actingTaskId, setActingTaskId] = useState('');
-  const [photoPrompt, setPhotoPrompt] = useState<{
-    request: SurgeryRequest;
-    task: TransportTask;
-    action: string;
-    photoType: EvidencePhotoType;
-  } | null>(null);
-  const [evidencePhotos, setEvidencePhotos] = useState<Array<{ id: string; file: File; previewUrl: string }>>([]);
-  const [evidenceUploading, setEvidenceUploading] = useState(false);
-  const [evidenceError, setEvidenceError] = useState('');
+  const [photoPrompt, setPhotoPrompt] = useState<{ request: SurgeryRequest; task: TransportTask } | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [collapsedColumns, setCollapsedColumns] = useState<Set<RequestStatus>>(
     () => new Set(columns.map((column) => column.status))
@@ -206,119 +196,11 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
 
   const startTaskAction = (request: SurgeryRequest, task: TransportTask, action: string) => {
     if (action === 'complete') {
-      evidencePhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-      setEvidencePhotos([]);
-      setEvidenceError('');
-      setPhotoPrompt({
-        request,
-        task,
-        action,
-        photoType: task.type === 'delivery' ? 'delivery' : 'pickup',
-      });
+      setPhotoPrompt({ request, task });
       return;
     }
 
     void runTaskAction(task, action);
-  };
-
-  const addEvidencePhotos = async (files: File[]) => {
-    const selectedFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (!selectedFiles.length) return;
-    setEvidenceError('');
-    const optimizedFiles = await Promise.all(selectedFiles.map((file) => optimizeEvidencePhoto(file)));
-    setEvidencePhotos((current) => [
-      ...current,
-      ...optimizedFiles.map((file) => ({
-        id: crypto.randomUUID(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-      })),
-    ]);
-  };
-
-  const closePhotoPrompt = () => {
-    evidencePhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-    setEvidencePhotos([]);
-    setEvidenceError('');
-    setPhotoPrompt(null);
-  };
-
-  const removeEvidencePhoto = (photoId: string) => {
-    setEvidencePhotos((current) => {
-      const photo = current.find((item) => item.id === photoId);
-      if (photo) URL.revokeObjectURL(photo.previewUrl);
-      return current.filter((item) => item.id !== photoId);
-    });
-  };
-
-  const uploadEvidenceAndRunAction = async () => {
-    if (!photoPrompt) return;
-    if (!evidencePhotos.length) {
-      setEvidenceError('Anexe pelo menos uma foto para concluir esta etapa.');
-      return;
-    }
-
-    setEvidenceUploading(true);
-    setEvidenceError('');
-    setActingTaskId(photoPrompt.task.id);
-    const uploadedPaths: string[] = [];
-
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Sessão expirada. Entre novamente para enviar a foto.');
-
-      const evidenceRows = [];
-      for (const photo of evidencePhotos) {
-        const extension = photo.file.name.split('.').pop() || 'jpg';
-        const storagePath = `${photoPrompt.request.id}/${photoPrompt.photoType}/${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from('transport-evidence-photos')
-          .upload(storagePath, photo.file, { contentType: photo.file.type || 'image/jpeg', upsert: false });
-        if (uploadError) throw uploadError;
-        uploadedPaths.push(storagePath);
-        evidenceRows.push({
-          request_id: photoPrompt.request.id,
-          task_id: photoPrompt.task.id,
-          photo_type: photoPrompt.photoType,
-          storage_path: storagePath,
-          original_name: photo.file.name,
-          mime_type: photo.file.type,
-          uploaded_by: userData.user.id,
-        });
-      }
-
-      const { error: insertError } = await supabase.from('transport_evidence_photos').insert(evidenceRows);
-
-      if (insertError) {
-        await supabase.storage.from('transport-evidence-photos').remove(uploadedPaths);
-        throw insertError;
-      }
-
-      const { error: actionError } = await supabase.rpc('advance_transport_task', {
-        target_task_id: photoPrompt.task.id,
-        task_action: photoPrompt.action,
-        action_note: 'Foto registrada',
-      });
-      if (actionError) throw actionError;
-
-      notifyWhatsAppOperation(
-        photoPrompt.request.id,
-        photoPrompt.task.type === 'delivery' ? 'delivery_completed' : 'pickup_completed',
-        uploadedPaths
-      ).catch((notificationError) => {
-        console.error('WhatsApp notification failed', notificationError);
-      });
-
-      evidencePhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-      setPhotoPrompt(null);
-      setEvidencePhotos([]);
-      await loadRequests(true);
-    } catch (caughtError) {
-      setEvidenceError(caughtError instanceof Error ? caughtError.message : 'Não foi possível enviar a foto.');
-    } finally {
-      setEvidenceUploading(false);
-      setActingTaskId('');
-    }
   };
 
   const toggleCard = (requestId: string) => {
@@ -386,6 +268,9 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                   const action = actionForTask(task, profile, access);
                   const ActionIcon = action?.icon;
                   const routeQuery = routeQueryForTask(request, task);
+                  const savedPhotoCount = task
+                    ? request.transport_evidence_photos.filter((photo) => photo.task_id === task.id && new Date(photo.expires_at) > new Date()).length
+                    : 0;
                   const expanded = expandedCards.has(request.id);
                   const canNavigate =
                     Boolean(routeQuery) &&
@@ -476,6 +361,16 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                                 Navegar
                               </button>
                             )}
+                            {action?.action === 'complete' && task && (
+                              <button
+                                className="evidence-card-button"
+                                type="button"
+                                onClick={() => setPhotoPrompt({ request, task })}
+                              >
+                                <ImageIcon size={16} />
+                                Fotos{savedPhotoCount ? ` (${savedPhotoCount})` : ''}
+                              </button>
+                            )}
                             {action && task && ActionIcon && (
                               <button
                                 className="card-action-button"
@@ -551,36 +446,12 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       )}
 
       {photoPrompt && (
-        <div className="modal-backdrop" role="presentation">
-          <section className="evidence-modal" role="dialog" aria-modal="true" aria-labelledby="evidence-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header>
-              <div>
-                <p className="eyebrow">Evidência obrigatória</p>
-                <h2 id="evidence-title">
-                  {photoPrompt.photoType === 'delivery' ? 'Foto da entrega' : 'Foto da retirada'}
-                </h2>
-                <span>{photoPrompt.request.hospital}</span>
-              </div>
-              <button className="icon-button" type="button" onClick={closePhotoPrompt} aria-label="Fechar evidência">
-                <X size={20} />
-              </button>
-            </header>
-
-            <EvidencePhotoPicker photos={evidencePhotos} onAddFiles={addEvidencePhotos} onRemove={removeEvidencePhoto} />
-
-            {evidenceError && <p className="auth-message error">{evidenceError}</p>}
-
-            <footer>
-              <button className="secondary-button" type="button" onClick={closePhotoPrompt}>
-                Cancelar
-              </button>
-              <button className="card-action-button" type="button" onClick={() => void uploadEvidenceAndRunAction()} disabled={evidenceUploading}>
-                {evidenceUploading ? <LoaderCircle className="spin" size={17} /> : <ImageIcon size={17} />}
-                Salvar fotos e concluir
-              </button>
-            </footer>
-          </section>
-        </div>
+        <EvidenceDraftModal
+          request={photoPrompt.request}
+          task={photoPrompt.task}
+          onClose={() => setPhotoPrompt(null)}
+          onChanged={() => void loadRequests(true)}
+        />
       )}
     </section>
   );

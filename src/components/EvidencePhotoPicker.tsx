@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Image as ImageIcon, LoaderCircle, X } from 'lucide-react';
-
-type PendingPhoto = {
-  id: string;
-  file: File;
-  previewUrl: string;
-};
+import type { EvidencePickerPhoto } from '../usePersistedEvidence';
 
 type EvidencePhotoPickerProps = {
-  photos: PendingPhoto[];
+  photos: EvidencePickerPhoto[];
   onAddFiles: (files: File[]) => void;
   onRemove: (photoId: string) => void;
   emptyLabel?: string;
@@ -109,16 +104,28 @@ export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel =
     <div className="release-evidence-box">
       <div className="release-evidence-header">
         <strong>{photos.length ? `${photos.length} foto${photos.length > 1 ? 's' : ''} anexada${photos.length > 1 ? 's' : ''}` : emptyLabel}</strong>
-        <span>Mínimo obrigatório: 1 foto</span>
+        <span>Mínimo obrigatório: 1 foto salva</span>
       </div>
 
       <div className="pending-photo-list">
         {photos.map((photo, index) => (
-          <div className="pending-photo-thumb" key={photo.id}>
-            <img src={photo.previewUrl} alt={`Foto anexada ${index + 1}`} />
-            <button type="button" onClick={() => onRemove(photo.id)} aria-label="Remover foto">
-              <X size={14} />
-            </button>
+          <div className={`pending-photo-thumb state-${photo.state}`} key={photo.id}>
+            {photo.previewUrl ? (
+              <img src={photo.previewUrl} alt={`Foto anexada ${index + 1}`} />
+            ) : (
+              <ImageIcon size={24} aria-label={`Foto salva ${index + 1}`} />
+            )}
+            <span className="photo-state-label">
+              {photo.state === 'saved' && 'Salva'}
+              {photo.state === 'pending' && 'Não salva'}
+              {photo.state === 'uploading' && 'Enviando'}
+              {photo.state === 'error' && 'Erro'}
+            </span>
+            {photo.removable && (
+              <button type="button" onClick={() => onRemove(photo.id)} aria-label="Remover foto">
+                <X size={14} />
+              </button>
+            )}
           </div>
         ))}
 

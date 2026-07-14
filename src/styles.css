@@ -4212,3 +4212,110 @@ select:focus {
     grid-row: 1 / 5;
   }
 }
+
+
+/* Persisted evidence drafts */
+.operation-actions.compact .evidence-card-button {
+  min-height: 38px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.evidence-card-button,
+.evidence-save-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(8, 127, 123, 0.35);
+  border-radius: 7px;
+  background: #eef8f7;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.evidence-card-button:disabled,
+.evidence-save-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.pending-photo-thumb.state-error {
+  border-color: rgba(181, 42, 42, 0.55);
+}
+
+.pending-photo-thumb.state-pending {
+  border-color: rgba(198, 126, 15, 0.55);
+}
+
+.photo-state-label {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  left: 3px;
+  overflow: hidden;
+  padding: 3px 4px;
+  border-radius: 4px;
+  background: rgba(7, 25, 47, 0.78);
+  color: #fff !important;
+  font-size: 9px !important;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state-error .photo-state-label {
+  background: rgba(155, 31, 31, 0.88);
+}
+
+.state-pending .photo-state-label {
+  background: rgba(158, 96, 8, 0.88);
+}
+
+.evidence-loading {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.evidence-modal .evidence-draft-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: stretch;
+}
+
+.evidence-draft-actions > button {
+  min-height: 42px;
+}
+
+.release-footer {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.release-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 620px) {
+  .evidence-modal .evidence-draft-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .evidence-draft-actions > button,
+  .release-actions .evidence-save-button {
+    width: 100%;
+  }
+}

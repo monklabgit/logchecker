@@ -98,6 +98,7 @@ export type EvidencePhoto = {
   uploaded_by: string;
   created_at: string;
   expires_at: string;
+  finalized_at: string | null;
 };
 
 export type UserWhatsappConnection = {
