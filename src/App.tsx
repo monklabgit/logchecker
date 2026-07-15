@@ -25,6 +25,7 @@ function App() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [appUpdating, setAppUpdating] = useState(false);
   const [saveNotice, setSaveNotice] = useState('');
   const [roleAccess, setRoleAccess] = useState(() => emptyAccessMap());
 
@@ -184,6 +185,12 @@ function App() {
     await supabase.auth.signOut();
   };
 
+  const updateApplication = () => {
+    if (appUpdating) return;
+    setAppUpdating(true);
+    window.dispatchEvent(new CustomEvent('logchecker-apply-update'));
+  };
+
   const handleSaved = (requestId: string) => {
     setHighlightedRequestId(requestId);
     setSaveNotice('Solicitação salva com sucesso e disponível para entrega.');
@@ -315,6 +322,10 @@ function App() {
                   <span>Configurações</span>
                 </button>
               )}
+              <button type="button" role="menuitem" onClick={updateApplication} disabled={appUpdating}>
+                <RefreshCw className={appUpdating ? 'spin' : undefined} size={17} />
+                <span>{appUpdating ? 'Atualizando aplicativo...' : 'Atualizar aplicativo'}</span>
+              </button>
               <button type="button" role="menuitem" onClick={signOut}>
                 <LogOut size={17} />
                 <span>Sair</span>
@@ -327,9 +338,9 @@ function App() {
       {updateAvailable && (
         <div className="update-banner" role="status">
           <span>Há uma versão nova do LogChecker disponível.</span>
-          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('logchecker-apply-update'))}>
+          <button type="button" onClick={updateApplication} disabled={appUpdating}>
             <RefreshCw size={16} />
-            Atualizar
+            {appUpdating ? 'Atualizando...' : 'Atualizar'}
           </button>
         </div>
       )}

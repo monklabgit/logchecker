@@ -73,11 +73,32 @@ if (import.meta.env.PROD && !isPreviewDeployment && 'serviceWorker' in navigator
   });
 
   window.addEventListener('logchecker-apply-update', () => {
-    if (waitingWorker) {
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-      window.setTimeout(() => window.location.reload(), 250);
-    } else {
-      window.location.reload();
-    }
+    void (async () => {
+      let reloading = false;
+      const reloadFresh = async () => {
+        if (reloading) return;
+        reloading = true;
+
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.filter((key) => key.startsWith('logchecker-')).map((key) => caches.delete(key)));
+        }
+
+        window.location.reload();
+      };
+
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.update().catch(() => undefined)));
+
+      const nextWorker = waitingWorker || registrations.find((registration) => registration.waiting)?.waiting;
+      if (!nextWorker) {
+        await reloadFresh();
+        return;
+      }
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => void reloadFresh(), { once: true });
+      nextWorker.postMessage({ type: 'SKIP_WAITING' });
+      window.setTimeout(() => void reloadFresh(), 2500);
+    })();
   });
 }
