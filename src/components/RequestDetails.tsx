@@ -53,6 +53,9 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
     taskId: null,
     photoType: 'instrumentator_release',
   });
+  const completedDelivery = request.transport_tasks
+    .filter((task) => task.type === 'delivery' && task.status === 'completed')
+    .sort((a, b) => (b.completed_at || b.created_at).localeCompare(a.completed_at || a.created_at))[0];
 
   useEffect(() => {
     let active = true;
@@ -216,6 +219,28 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             })}
             {request.observation && <p className="surgery-observation"><strong>Observação da cirurgia:</strong> {request.observation}</p>}
           </section>
+
+          {completedDelivery && (completedDelivery.delivery_received_cme || completedDelivery.delivery_received_opme || completedDelivery.delivery_observation) && (
+            <section className="details-delivery-receipt">
+              <h3><PackageOpen size={18} /> Dados da entrega</h3>
+              <dl className="compact-details-list">
+                <div>
+                  <dt>Recebido no CME</dt>
+                  <dd>{completedDelivery.delivery_received_cme || 'Não informado'}</dd>
+                </div>
+                <div>
+                  <dt>Recebido no OPME</dt>
+                  <dd>{completedDelivery.delivery_received_opme || 'Não informado'}</dd>
+                </div>
+                {completedDelivery.delivery_observation && (
+                  <div>
+                    <dt>Observação da entrega</dt>
+                    <dd>{completedDelivery.delivery_observation}</dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
 
           <section className="details-history">
             <button className="details-history-toggle" type="button" onClick={() => setHistoryOpen((current) => !current)} aria-expanded={historyOpen}>

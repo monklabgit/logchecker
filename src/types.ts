@@ -84,6 +84,9 @@ export type TransportTask = {
   started_at: string | null;
   completed_at: string | null;
   driver_note: string;
+  delivery_received_cme: string;
+  delivery_received_opme: string;
+  delivery_observation: string;
   created_at: string;
 };
 

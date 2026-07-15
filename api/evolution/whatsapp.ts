@@ -143,6 +143,14 @@ const buildNotificationMessage = (
     surgery_time: string | null;
     procedure: string;
     request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
+    transport_tasks: Array<{
+      type: string;
+      status: string;
+      completed_at: string | null;
+      delivery_received_cme: string;
+      delivery_received_opme: string;
+      delivery_observation: string;
+    }>;
   },
   eventType: NotifyEventType,
   actorName: string,
@@ -150,6 +158,18 @@ const buildNotificationMessage = (
 ) => {
   const codeLabel = requestCodeLabel(request.code);
   const title = `${titleForEvent(eventType)} - ${request.hospital}`;
+  const delivery = request.transport_tasks
+    .filter((task) => task.type === 'delivery' && task.status === 'completed')
+    .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''))[0];
+  const deliveryReceipt = eventType === 'delivery_completed'
+    ? [
+        'Recebido:',
+        `CME - ${delivery?.delivery_received_cme || 'Não informado'}`,
+        `OPME - ${delivery?.delivery_received_opme || 'Não informado'}`,
+        delivery?.delivery_observation ? `Observação da entrega: ${delivery.delivery_observation}` : '',
+        '===============',
+      ]
+    : [];
   return [
     '===============',
     title,
@@ -165,6 +185,7 @@ const buildNotificationMessage = (
     '----------',
     sectionBlock(request, 'OPME'),
     '===============',
+    ...deliveryReceipt,
     `${actionLineForEvent(eventType)}: ${actorName || 'Usuário LogChecker'}`,
     photoCount ? `Evidências: ${photoCount} foto${photoCount === 1 ? '' : 's'}` : '',
     '===============',
@@ -336,7 +357,7 @@ export default async function handler(req: any, res: any) {
       const [{ data: request, error: requestError }, { data: profile }] = await Promise.all([
         supabase
           .from('surgery_requests')
-          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, request_items(section, quantity, description, note)')
+          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, request_items(section, quantity, description, note), transport_tasks(type, status, completed_at, delivery_received_cme, delivery_received_opme, delivery_observation)')
           .eq('id', body.requestId)
           .single(),
         supabase.from('profiles').select('full_name').eq('id', profileId).maybeSingle(),
@@ -390,6 +411,14 @@ export default async function handler(req: any, res: any) {
           surgery_time: string | null;
           procedure: string;
           request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
+          transport_tasks: Array<{
+            type: string;
+            status: string;
+            completed_at: string | null;
+            delivery_received_cme: string;
+            delivery_received_opme: string;
+            delivery_observation: string;
+          }>;
         },
         body.eventType,
         profile?.full_name || userData.user.email || '',
