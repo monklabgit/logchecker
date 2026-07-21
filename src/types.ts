@@ -11,7 +11,7 @@ export type RequestStatus =
 
 export type TransportType = 'delivery' | 'pickup';
 export type TransportStatus = 'available' | 'assigned' | 'in_route' | 'completed' | 'cancelled';
-export type EvidencePhotoType = 'delivery' | 'pickup' | 'instrumentator_release';
+export type EvidencePhotoType = 'delivery' | 'pickup' | 'instrumentator_release' | 'kit_control';
 export type InventoryCategory = 'instrumental' | 'opme';
 export type InventoryStatus = 'in_stock' | 'in_route' | 'hospital' | 'consigned';
 
@@ -110,6 +110,8 @@ export type UserWhatsappConnection = {
   connection_state: 'open' | 'close' | 'connecting' | string;
   group_jid: string;
   group_name: string;
+  kit_control_group_jid: string;
+  kit_control_group_name: string;
   last_qr_at: string | null;
   connected_at: string | null;
   created_at: string;

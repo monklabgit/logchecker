@@ -7,6 +7,8 @@ const currentGroupJid = '120363211296860448@g.us';
 const currentGroupName = 'Marja logística Rio';
 const configuredGroupJid = (process.env.LOGCHECKER_WHATSAPP_GROUP_JID || '').trim();
 const configuredGroupName = (process.env.LOGCHECKER_WHATSAPP_GROUP_NAME || '').trim();
+const configuredKitControlGroupJid = (process.env.LOGCHECKER_KIT_CONTROL_GROUP_JID || '').trim();
+const configuredKitControlGroupName = (process.env.LOGCHECKER_KIT_CONTROL_GROUP_NAME || '').trim();
 const defaultGroupJid = !configuredGroupJid || configuredGroupJid === legacyGroupJid ? currentGroupJid : configuredGroupJid;
 const defaultGroupName = !configuredGroupName || configuredGroupJid === legacyGroupJid ? currentGroupName : configuredGroupName;
 const supabaseProjectUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://lkuggbejehlaxpoykwcs.supabase.co';
@@ -15,13 +17,17 @@ const supabasePublishableKey =
   process.env.SUPABASE_ANON_KEY ||
   'sb_publishable_vjE_pfGQ3RDyQo4UoItU6w_gvnmeTUy';
 
-type NotifyEventType = 'delivery_completed' | 'release_completed' | 'pickup_completed';
+type NotifyEventType = 'delivery_completed' | 'release_completed' | 'pickup_completed' | 'kit_control';
 
 type WhatsappBody = {
   action?: string;
   requestId?: string;
   eventType?: NotifyEventType;
   photoPaths?: string[];
+  logisticsGroupJid?: string;
+  logisticsGroupName?: string;
+  kitControlGroupJid?: string;
+  kitControlGroupName?: string;
 };
 
 type WhatsappConnection = {
@@ -29,6 +35,8 @@ type WhatsappConnection = {
   connection_state: string;
   group_jid: string;
   group_name: string;
+  kit_control_group_jid: string;
+  kit_control_group_name: string;
 };
 
 const sendJson = (res: any, status: number, payload: unknown) =>
@@ -108,12 +116,21 @@ const formatTime = (value: string | null) => {
 const titleForEvent = (eventType: NotifyEventType) => {
   if (eventType === 'delivery_completed') return 'ENTRADA';
   if (eventType === 'release_completed') return 'LIBERAÇÃO';
+  if (eventType === 'kit_control') return 'CONFERÊNCIA DE KITS';
   return 'RETIRADA';
+};
+
+const photoTypeForEvent = (eventType: NotifyEventType) => {
+  if (eventType === 'delivery_completed') return 'delivery';
+  if (eventType === 'release_completed') return 'instrumentator_release';
+  if (eventType === 'kit_control') return 'kit_control';
+  return 'pickup';
 };
 
 const actionLineForEvent = (eventType: NotifyEventType) => {
   if (eventType === 'delivery_completed') return 'Entrega concluída por';
   if (eventType === 'release_completed') return 'Material liberado por';
+  if (eventType === 'kit_control') return 'Controle de Kits registrado por';
   return 'Retirada concluída por';
 };
 
@@ -250,18 +267,23 @@ export default async function handler(req: any, res: any) {
     return data as WhatsappConnection | null;
   };
 
-  const ensureDefaultGroup = async (connection: { group_jid: string; group_name: string } | null) => {
+  const ensureDefaultGroups = async (connection: WhatsappConnection | null) => {
     if (!connection) return connection;
-    if (connection.group_jid === defaultGroupJid && connection.group_name === defaultGroupName) return connection;
-    return updateConnection({
-      group_jid: defaultGroupJid,
-      group_name: defaultGroupName,
-    });
+    const updates: Record<string, string> = {};
+    if (!connection.group_jid && defaultGroupJid) updates.group_jid = defaultGroupJid;
+    if (!connection.group_name && defaultGroupName) updates.group_name = defaultGroupName;
+    if (!connection.kit_control_group_jid && configuredKitControlGroupJid) {
+      updates.kit_control_group_jid = configuredKitControlGroupJid;
+    }
+    if (!connection.kit_control_group_name && configuredKitControlGroupName) {
+      updates.kit_control_group_name = configuredKitControlGroupName;
+    }
+    return Object.keys(updates).length ? updateConnection(updates) : connection;
   };
 
   const ensureConnection = async () => {
     const existing = await getConnection();
-    if (existing) return (await ensureDefaultGroup(existing)) as WhatsappConnection;
+    if (existing) return (await ensureDefaultGroups(existing)) as WhatsappConnection;
 
     const profileName = await getProfileName();
     let lastError: unknown = null;
@@ -276,6 +298,8 @@ export default async function handler(req: any, res: any) {
           connection_state: 'close',
           group_jid: defaultGroupJid,
           group_name: defaultGroupName,
+          kit_control_group_jid: configuredKitControlGroupJid,
+          kit_control_group_name: configuredKitControlGroupName,
         })
         .select('*')
         .single();
@@ -296,6 +320,8 @@ export default async function handler(req: any, res: any) {
       connected_at: state === 'open' ? new Date().toISOString() : null,
       group_jid: connection.group_jid || defaultGroupJid,
       group_name: connection.group_name || defaultGroupName,
+      kit_control_group_jid: connection.kit_control_group_jid || configuredKitControlGroupJid,
+      kit_control_group_name: connection.kit_control_group_name || configuredKitControlGroupName,
     })) as WhatsappConnection;
   };
 
@@ -309,6 +335,40 @@ export default async function handler(req: any, res: any) {
       const updated = await refreshConnectionState(connection);
 
       return sendJson(res, 200, { connection: updated, state: updated.connection_state });
+    }
+
+    if (action === 'save_groups') {
+      const logisticsGroupJid = (body.logisticsGroupJid || '').trim();
+      const logisticsGroupName = (body.logisticsGroupName || '').trim();
+      const kitControlGroupJid = (body.kitControlGroupJid || '').trim();
+      const kitControlGroupName = (body.kitControlGroupName || '').trim();
+      const validGroupJid = /^\d+@g\.us$/;
+
+      if (!validGroupJid.test(logisticsGroupJid)) {
+        return sendJson(res, 400, { error: 'Informe um ID válido para o grupo de Logística.' });
+      }
+      if (!validGroupJid.test(kitControlGroupJid)) {
+        return sendJson(res, 400, { error: 'Informe um ID válido para o grupo de Conferência de Kits.' });
+      }
+      if (!logisticsGroupName || !kitControlGroupName) {
+        return sendJson(res, 400, { error: 'Informe o nome dos dois grupos.' });
+      }
+
+      const { data: canManageGroups } = await supabase.rpc('current_user_has_access', {
+        target_access_key: 'manage_whatsapp',
+      });
+      if (!canManageGroups) {
+        return sendJson(res, 403, { error: 'Você não tem permissão para configurar os grupos.' });
+      }
+
+      await ensureConnection();
+      const updated = await updateConnection({
+        group_jid: logisticsGroupJid,
+        group_name: logisticsGroupName,
+        kit_control_group_jid: kitControlGroupJid,
+        kit_control_group_name: kitControlGroupName,
+      });
+      return sendJson(res, 200, { connection: updated });
     }
 
     if (action === 'connect') {
@@ -392,14 +452,29 @@ export default async function handler(req: any, res: any) {
         });
       }
 
+      if (body.eventType === 'kit_control') {
+        const { data: canCreateRequests } = await supabase.rpc('current_user_has_access', {
+          target_access_key: 'create_requests',
+        });
+        if (!canCreateRequests) {
+          return sendJson(res, 403, { error: 'Você não tem permissão para enviar o Controle de Kits.' });
+        }
+      }
+
       const photoPaths = Array.from(new Set((body.photoPaths || []).filter(Boolean)));
-      const { data: photos } = photoPaths.length
+      const photoResult = photoPaths.length
         ? await supabase
             .from('transport_evidence_photos')
             .select('storage_path, original_name, mime_type')
             .eq('request_id', body.requestId)
+            .eq('photo_type', photoTypeForEvent(body.eventType))
             .in('storage_path', photoPaths)
-        : { data: [] };
+        : { data: [], error: null };
+      if (photoResult.error) throw photoResult.error;
+      const photos = photoResult.data || [];
+      if (body.eventType === 'kit_control' && !photos.length) {
+        throw new Error('Nenhuma foto válida de Controle de Kits foi encontrada.');
+      }
 
       const message = buildNotificationMessage(
         request as {
@@ -425,11 +500,19 @@ export default async function handler(req: any, res: any) {
         photos?.length || 0
       );
       const codeLabel = requestCodeLabel((request as { code?: number } | null)?.code);
+      const targetGroupJid = body.eventType === 'kit_control'
+        ? activeConnection.kit_control_group_jid
+        : activeConnection.group_jid;
+      if (!targetGroupJid) {
+        throw new Error(body.eventType === 'kit_control'
+          ? 'O grupo de Conferência de Kits não está configurado.'
+          : 'O grupo de Logística não está configurado.');
+      }
 
       await evolutionFetch(`/message/sendText/${encodeURIComponent(activeConnection.instance_name)}`, {
         method: 'POST',
         body: JSON.stringify({
-          number: activeConnection.group_jid,
+          number: targetGroupJid,
           text: message,
         }),
       });
@@ -441,12 +524,12 @@ export default async function handler(req: any, res: any) {
         await evolutionFetch(`/message/sendMedia/${encodeURIComponent(activeConnection.instance_name)}`, {
           method: 'POST',
           body: JSON.stringify({
-            number: activeConnection.group_jid,
+            number: targetGroupJid,
             mediatype: 'image',
             mimetype: photo.mime_type || 'image/jpeg',
             media: signed.signedUrl,
             fileName: photo.original_name || 'evidencia.jpg',
-            caption: `Evidência ${codeLabel} - ${titleForEvent(body.eventType)}`,
+            caption: `${titleForEvent(body.eventType)} ${codeLabel}`,
           }),
         });
         sentMedia += 1;

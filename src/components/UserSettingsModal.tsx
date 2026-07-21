@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { LoaderCircle, MessageCircle, PlugZap, QrCode, Unplug, UsersRound } from 'lucide-react';
+import { LoaderCircle, MessageCircle, PlugZap, QrCode, Save, Unplug, UsersRound } from 'lucide-react';
 import type { Profile, UserWhatsappConnection } from '../types';
 
 type UserSettingsPageProps = {
@@ -29,6 +29,10 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
   const [acting, setActing] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [logisticsGroupJid, setLogisticsGroupJid] = useState('');
+  const [logisticsGroupName, setLogisticsGroupName] = useState('');
+  const [kitControlGroupJid, setKitControlGroupJid] = useState('');
+  const [kitControlGroupName, setKitControlGroupName] = useState('');
 
   const callWhatsapp = async (payload: Record<string, unknown>) => {
     const response = await fetch('/api/evolution/whatsapp', {
@@ -47,6 +51,11 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
   const applyConnection = (nextConnection?: UserWhatsappConnection | null) => {
     if (typeof nextConnection === 'undefined') return;
     setConnection(nextConnection);
+    if (!nextConnection) return;
+    setLogisticsGroupJid(nextConnection.group_jid || '');
+    setLogisticsGroupName(nextConnection.group_name || '');
+    setKitControlGroupJid(nextConnection.kit_control_group_jid || '');
+    setKitControlGroupName(nextConnection.kit_control_group_name || '');
   };
 
   const loadStatus = async (quiet = false) => {
@@ -93,6 +102,27 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
       setNotice('WhatsApp desconectado.');
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível desconectar.');
+    } finally {
+      setActing('');
+    }
+  };
+
+  const saveGroups = async () => {
+    setActing('save-groups');
+    setError('');
+    setNotice('');
+    try {
+      const data = await callWhatsapp({
+        action: 'save_groups',
+        logisticsGroupJid,
+        logisticsGroupName,
+        kitControlGroupJid,
+        kitControlGroupName,
+      });
+      applyConnection(data.connection);
+      setNotice('Grupos do WhatsApp atualizados.');
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível salvar os grupos.');
     } finally {
       setActing('');
     }
@@ -157,15 +187,43 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
                   </div>
                 )}
 
-                {connection?.group_jid && (
-                  <div className="whatsapp-group-summary">
+                <div className="whatsapp-group-settings">
+                  <div className="whatsapp-group-settings-title">
                     <UsersRound size={18} />
-                    <span>
-                      <strong>{connection.group_name || 'Grupo de logística'}</strong>
-                      <small>{connection.group_jid}</small>
-                    </span>
+                    <div>
+                      <strong>Grupos de disparo</strong>
+                      <span>Defina um destino para a logística e outro para a Conferência de Kits.</span>
+                    </div>
                   </div>
-                )}
+                  <div className="whatsapp-groups-grid">
+                    <div className="whatsapp-group-fields">
+                      <h4>Logística</h4>
+                      <label>
+                        <span>Nome do grupo</span>
+                        <input value={logisticsGroupName} onChange={(event) => setLogisticsGroupName(event.target.value)} placeholder="Ex.: Marja Logística Rio" />
+                      </label>
+                      <label>
+                        <span>ID do grupo</span>
+                        <input value={logisticsGroupJid} onChange={(event) => setLogisticsGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" />
+                      </label>
+                    </div>
+                    <div className="whatsapp-group-fields">
+                      <h4>Conferência de Kits</h4>
+                      <label>
+                        <span>Nome do grupo</span>
+                        <input value={kitControlGroupName} onChange={(event) => setKitControlGroupName(event.target.value)} placeholder="Ex.: Conferência de Kits" />
+                      </label>
+                      <label>
+                        <span>ID do grupo</span>
+                        <input value={kitControlGroupJid} onChange={(event) => setKitControlGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" />
+                      </label>
+                    </div>
+                  </div>
+                  <button className="save-whatsapp-groups-button" type="button" onClick={() => void saveGroups()} disabled={Boolean(acting)}>
+                    {acting === 'save-groups' ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+                    Salvar grupos
+                  </button>
+                </div>
               </>
             )}
 

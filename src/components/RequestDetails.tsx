@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Save, UserRound, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Save, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
 import { usePersistedEvidence } from '../usePersistedEvidence';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
+import { KitControlModal } from './KitControlModal';
 import { WhatsAppDispatchDialog } from './WhatsAppDispatchDialog';
 
 type RequestDetailsProps = {
@@ -38,6 +39,7 @@ const photoTypeLabels = {
   delivery: 'Entrega',
   pickup: 'Retirada',
   instrumentator_release: 'Liberação',
+  kit_control: 'Controle de Kits',
 };
 
 export function RequestDetails({ profile, access, request, onClose, onChanged }: RequestDetailsProps) {
@@ -50,11 +52,15 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
   const [error, setError] = useState('');
   const [releaseSavedMessage, setReleaseSavedMessage] = useState('');
   const [dispatchConfirmationOpen, setDispatchConfirmationOpen] = useState(false);
+  const [kitControlOpen, setKitControlOpen] = useState(false);
   const releaseEvidence = usePersistedEvidence({
     requestId: request.id,
     taskId: null,
     photoType: 'instrumentator_release',
   });
+  const kitControlPhotoCount = request.transport_evidence_photos.filter(
+    (photo) => photo.photo_type === 'kit_control' && new Date(photo.expires_at) > new Date()
+  ).length;
   const completedDelivery = request.transport_tasks
     .filter((task) => task.type === 'delivery' && task.status === 'completed')
     .sort((a, b) => (b.completed_at || b.created_at).localeCompare(a.completed_at || a.created_at))[0];
@@ -234,6 +240,19 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             {request.observation && <p className="surgery-observation"><strong>Observação da cirurgia:</strong> {request.observation}</p>}
           </section>
 
+          {access.create_requests && request.status !== 'cancelled' && (
+            <section className="details-kit-control">
+              <div>
+                <h3><ClipboardCheck size={18} /> Controle de Kits</h3>
+                <p>{kitControlPhotoCount ? `${kitControlPhotoCount} foto${kitControlPhotoCount === 1 ? '' : 's'} salva${kitControlPhotoCount === 1 ? '' : 's'}` : 'Nenhuma foto registrada'}</p>
+              </div>
+              <button className="secondary-button" type="button" onClick={() => setKitControlOpen(true)}>
+                <ImageIcon size={17} />
+                Anexar fotos
+              </button>
+            </section>
+          )}
+
           {completedDelivery && (completedDelivery.delivery_received_cme || completedDelivery.delivery_received_opme || completedDelivery.delivery_observation) && (
             <section className="details-delivery-receipt">
               <h3><PackageOpen size={18} /> Dados da entrega</h3>
@@ -342,6 +361,14 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
               </button>
             </div>
           </footer>
+        )}
+
+        {kitControlOpen && (
+          <KitControlModal
+            request={request}
+            onClose={() => setKitControlOpen(false)}
+            onChanged={onChanged}
+          />
         )}
 
         {dispatchConfirmationOpen && (

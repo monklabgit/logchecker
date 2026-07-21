@@ -145,7 +145,7 @@ export function usePersistedEvidence({ requestId, taskId, photoType }: UsePersis
 
   const savePending = useCallback(async () => {
     const photosToUpload = localPhotosRef.current.filter((photo) => photo.state !== 'uploading');
-    if (!photosToUpload.length) return { photos: savedPhotos, failed: false };
+    if (!photosToUpload.length) return { photos: savedPhotos, uploadedPhotos: [], failed: false };
 
     setUploading(true);
     setError('');
@@ -153,10 +153,11 @@ export function usePersistedEvidence({ requestId, taskId, photoType }: UsePersis
     if (!userData.user) {
       setUploading(false);
       setError('Sessão expirada. Entre novamente para enviar as fotos.');
-      return { photos: savedPhotos, failed: true };
+      return { photos: savedPhotos, uploadedPhotos: [], failed: true };
     }
 
     const nextSaved = [...savedPhotos];
+    const uploadedPhotos: SignedEvidencePhoto[] = [];
     let failed = false;
 
     for (const photo of photosToUpload) {
@@ -192,6 +193,7 @@ export function usePersistedEvidence({ requestId, taskId, photoType }: UsePersis
 
         const signed = await signPhoto(inserted as EvidencePhoto);
         nextSaved.push(signed);
+        uploadedPhotos.push(signed);
         setSavedPhotos((current) => [...current, signed]);
         URL.revokeObjectURL(photo.previewUrl);
         setLocalPhotos((current) => current.filter((item) => item.id !== photo.id));
@@ -203,7 +205,7 @@ export function usePersistedEvidence({ requestId, taskId, photoType }: UsePersis
     }
 
     setUploading(false);
-    return { photos: nextSaved, failed };
+    return { photos: nextSaved, uploadedPhotos, failed };
   }, [photoType, requestId, savedPhotos, taskId]);
 
   const pickerPhotos = useMemo<EvidencePickerPhoto[]>(
