@@ -4732,9 +4732,10 @@ select:focus {
 }
 
 .print-copy-stepper label {
-  display: grid;
+  display: flex;
   width: 62px;
-  place-content: center;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 }
 
@@ -4747,11 +4748,16 @@ select:focus {
 
 .print-copy-stepper input {
   width: 100%;
+  height: 100%;
+  padding: 0;
   border: 0;
   outline: 0;
+  background: transparent;
   color: var(--navy);
+  font-family: inherit;
   font-size: 15px;
   font-weight: 900;
+  line-height: 1;
   text-align: center;
   appearance: textfield;
 }
@@ -4767,6 +4773,10 @@ select:focus {
   gap: 24px;
   overflow: auto;
   padding: 24px;
+}
+
+.surgery-print-page.print-additional-copy {
+  display: none;
 }
 
 .surgery-print-page {
@@ -5165,6 +5175,7 @@ select:focus {
 
   .surgery-print-page,
   .surgery-print-page.compact {
+    display: flex;
     width: 210mm;
     height: 297mm;
     min-height: 297mm;
@@ -5176,6 +5187,10 @@ select:focus {
     box-shadow: none;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  .surgery-print-page.print-additional-copy {
+    display: flex;
   }
 
   .surgery-print-page:last-child {

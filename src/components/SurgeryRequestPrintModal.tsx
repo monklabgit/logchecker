@@ -72,7 +72,10 @@ function SurgeryRequestSheet({ request, copy }: { request: SurgeryRequest; copy:
   ];
 
   return (
-    <article className={`surgery-print-page ${compact ? 'compact' : ''}`} aria-label={`Solicitação para impressão, cópia ${copy}`}>
+    <article
+      className={`surgery-print-page ${compact ? 'compact' : ''} ${copy > 1 ? 'print-additional-copy' : ''}`}
+      aria-label={`Solicitação para impressão, cópia ${copy}`}
+    >
       <div className="print-page-border" />
       <img className="print-watermark" src="/brand/marja-logo.png" alt="" />
 
@@ -151,8 +154,7 @@ export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPri
                 <button type="button" onClick={() => setCopies((value) => Math.max(1, value - 1))} disabled={copies === 1} aria-label="Diminuir cópias">
                   <Minus size={17} />
                 </button>
-                <label>
-                  <span>Cópias</span>
+                <label aria-label="Número de cópias">
                   <input type="number" min="1" max="20" value={copies} onChange={(event) => setCopies(Math.min(20, Math.max(1, Number(event.target.value) || 1)))} />
                 </label>
                 <button type="button" onClick={() => setCopies((value) => Math.min(20, value + 1))} disabled={copies === 20} aria-label="Aumentar cópias">
