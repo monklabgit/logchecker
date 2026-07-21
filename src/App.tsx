@@ -6,13 +6,13 @@ import { HospitalsAdmin } from './components/HospitalsAdmin';
 import { InventoryAdmin } from './components/InventoryAdmin';
 import { OperationsDashboard } from './components/OperationsDashboard';
 import { RequestsOverview } from './components/RequestsOverview';
-import { UserSettingsModal } from './components/UserSettingsModal';
+import { UserSettingsPage } from './components/UserSettingsModal';
 import { UsersAdmin } from './components/UsersAdmin';
 import { DEFAULT_ROLE_ACCESS, emptyAccessMap } from './permissions';
 import { supabase } from './supabase';
 import type { Profile, RoleAccessScope } from './types';
 
-type AppView = 'flow' | 'requests' | 'inventory' | 'hospitals' | 'users';
+type AppView = 'flow' | 'requests' | 'inventory' | 'hospitals' | 'users' | 'settings';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -23,7 +23,6 @@ function App() {
   const [highlightedRequestId, setHighlightedRequestId] = useState('');
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [appUpdating, setAppUpdating] = useState(false);
   const [saveNotice, setSaveNotice] = useState('');
@@ -167,13 +166,15 @@ function App() {
     const canInventory = access.manage_inventory;
     const canHospitals = access.manage_hospitals;
     const canUsers = profile.role === 'admin' || access.manage_users;
+    const canSettings = access.manage_whatsapp;
 
     const allowed =
       (view === 'flow' && canFlow) ||
       (view === 'requests' && canRequests) ||
       (view === 'inventory' && canInventory) ||
       (view === 'hospitals' && canHospitals) ||
-      (view === 'users' && canUsers);
+      (view === 'users' && canUsers) ||
+      (view === 'settings' && canSettings);
 
     if (allowed) return;
 
@@ -314,7 +315,7 @@ function App() {
                   type="button"
                   role="menuitem"
                   onClick={() => {
-                    setSettingsOpen(true);
+                    setView('settings');
                     setAccountMenuOpen(false);
                   }}
                 >
@@ -367,7 +368,7 @@ function App() {
       {view === 'inventory' && <InventoryAdmin />}
       {view === 'hospitals' && <HospitalsAdmin />}
       {view === 'users' && <UsersAdmin />}
-      {settingsOpen && <UserSettingsModal profile={profile} session={session} onClose={() => setSettingsOpen(false)} />}
+      {view === 'settings' && <UserSettingsPage profile={profile} session={session} />}
     </main>
   );
 }

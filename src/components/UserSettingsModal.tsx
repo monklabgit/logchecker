@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { LoaderCircle, MessageCircle, PlugZap, QrCode, Unplug, UsersRound, X } from 'lucide-react';
+import { LoaderCircle, MessageCircle, PlugZap, QrCode, Unplug, UsersRound } from 'lucide-react';
 import type { Profile, UserWhatsappConnection } from '../types';
 
-type UserSettingsModalProps = {
+type UserSettingsPageProps = {
   profile: Profile;
   session: Session;
-  onClose: () => void;
 };
 
 type WhatsappResponse = {
@@ -23,7 +22,7 @@ const stateLabels: Record<string, string> = {
   not_configured: 'Não configurado',
 };
 
-export function UserSettingsModal({ profile, session, onClose }: UserSettingsModalProps) {
+export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
   const [connection, setConnection] = useState<UserWhatsappConnection | null>(null);
   const [qrcode, setQrcode] = useState('');
   const [loading, setLoading] = useState(true);
@@ -102,21 +101,17 @@ export function UserSettingsModal({ profile, session, onClose }: UserSettingsMod
   const state = connection?.connection_state || 'not_configured';
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-        <header>
-          <div>
-            <p className="eyebrow">conta</p>
-            <h2 id="settings-title">Configurações</h2>
-            <span>{profile.full_name || session.user.email}</span>
-          </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar configurações">
-            <X size={20} />
-          </button>
-        </header>
+    <section className="settings-view" aria-labelledby="settings-title">
+      <header className="settings-page-header">
+        <div>
+          <p className="eyebrow">Conta</p>
+          <h1 id="settings-title">Configurações</h1>
+          <span>{profile.full_name || session.user.email}</span>
+        </div>
+      </header>
 
-        <div className="settings-body">
-          <section className="settings-section">
+      <div className="settings-page-content">
+        <section className="settings-section settings-page-section">
             <div className="settings-section-title">
               <MessageCircle size={20} />
               <div>
@@ -176,9 +171,8 @@ export function UserSettingsModal({ profile, session, onClose }: UserSettingsMod
 
             {error && <p className="auth-message error">{error}</p>}
             {notice && <p className="auth-message notice">{notice}</p>}
-          </section>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </section>
   );
 }

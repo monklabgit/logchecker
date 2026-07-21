@@ -41,6 +41,14 @@ const columns: Array<{ status: RequestStatus; label: string; tone: string; icon:
 ];
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
+const compactDateFormatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+const requestSchedule = (request: SurgeryRequest) => ({
+  date: request.surgery_date
+    ? compactDateFormatter.format(new Date(`${request.surgery_date}T12:00:00`))
+    : 'Sem data',
+  time: request.surgery_time ? request.surgery_time.slice(0, 5) : 'Sem horário',
+});
 
 const getOpenTask = (request: SurgeryRequest) =>
   request.transport_tasks
@@ -264,6 +272,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
 
               <div className="kanban-cards">
                 {groupedRequests[column.status].map((request) => {
+                  const schedule = requestSchedule(request);
                   const task = getOpenTask(request);
                   const action = actionForTask(task, profile, access);
                   const ActionIcon = action?.icon;
@@ -292,11 +301,15 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                         onClick={() => toggleCard(request.id)}
                         aria-expanded={expanded}
                       >
-                        <span>
-                          <strong>
-                            <small>#{String(request.code).padStart(4, '0')}</small>
-                            {request.hospital}
-                          </strong>
+                        <span className="operation-card-heading">
+                          <small className="operation-card-meta">
+                            <b>#{String(request.code).padStart(4, '0')}</b>
+                            <i>|</i>
+                            <time dateTime={request.surgery_date || undefined}>{schedule.date}</time>
+                            <i>|</i>
+                            <time>{schedule.time}</time>
+                          </small>
+                          <strong>{request.hospital}</strong>
                         </span>
                         <ChevronDown className={expanded ? 'expanded' : ''} size={18} />
                       </button>

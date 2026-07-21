@@ -5,6 +5,7 @@ import type { SurgeryRequest, TransportTask } from '../types';
 import { usePersistedEvidence } from '../usePersistedEvidence';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
+import { WhatsAppDispatchDialog } from './WhatsAppDispatchDialog';
 
 type EvidenceDraftModalProps = {
   request: SurgeryRequest;
@@ -25,6 +26,7 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
   const [receivedCme, setReceivedCme] = useState(task.delivery_received_cme || '');
   const [receivedOpme, setReceivedOpme] = useState(task.delivery_received_opme || '');
   const [deliveryObservation, setDeliveryObservation] = useState(task.delivery_observation || '');
+  const [dispatchConfirmationOpen, setDispatchConfirmationOpen] = useState(false);
   const hasCmeMaterials = request.request_items.some((item) => item.section === 'CME');
   const hasOpmeMaterials = request.request_items.some((item) => item.section === 'OPME');
 
@@ -52,21 +54,30 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
     }
   };
 
-  const completeTask = async () => {
+  const validateCompletion = () => {
+    evidence.setError('');
+    if (task.type === 'delivery' && hasCmeMaterials && !receivedCme.trim()) {
+      evidence.setError('Informe quem recebeu os materiais no CME.');
+      return false;
+    }
+    if (task.type === 'delivery' && hasOpmeMaterials && !receivedOpme.trim()) {
+      evidence.setError('Informe quem recebeu os materiais no OPME.');
+      return false;
+    }
+    if (!evidence.hasPending && !evidence.savedPhotos.length) {
+      evidence.setError('Salve pelo menos uma foto para concluir esta etapa.');
+      return false;
+    }
+    return true;
+  };
+
+  const completeTask = async (sendWhatsApp: boolean) => {
+    setDispatchConfirmationOpen(false);
     setSavedMessage('');
     setCompleting(true);
     evidence.setError('');
 
     try {
-      if (task.type === 'delivery' && hasCmeMaterials && !receivedCme.trim()) {
-        evidence.setError('Informe quem recebeu os materiais no CME.');
-        return;
-      }
-      if (task.type === 'delivery' && hasOpmeMaterials && !receivedOpme.trim()) {
-        evidence.setError('Informe quem recebeu os materiais no OPME.');
-        return;
-      }
-
       const result = await evidence.savePending();
       if (result.failed) return;
       if (!result.photos.length) {
@@ -84,13 +95,15 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
       if (error) throw error;
 
       const photoPaths = result.photos.map((photo) => photo.storage_path);
-      notifyWhatsAppOperation(
-        request.id,
-        task.type === 'delivery' ? 'delivery_completed' : 'pickup_completed',
-        photoPaths
-      ).catch((notificationError) => {
-        console.error('WhatsApp notification failed', notificationError);
-      });
+      if (sendWhatsApp) {
+        notifyWhatsAppOperation(
+          request.id,
+          task.type === 'delivery' ? 'delivery_completed' : 'pickup_completed',
+          photoPaths
+        ).catch((notificationError) => {
+          console.error('WhatsApp notification failed', notificationError);
+        });
+      }
 
       onChanged();
       onClose();
@@ -99,6 +112,15 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
     } finally {
       setCompleting(false);
     }
+  };
+
+  const requestCompletion = () => {
+    if (!validateCompletion()) return;
+    if (task.type === 'delivery') {
+      setDispatchConfirmationOpen(true);
+      return;
+    }
+    void completeTask(true);
   };
 
   const busy = evidence.uploading || completing;
@@ -176,11 +198,19 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
             {evidence.uploading ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
             Salvar fotos
           </button>
-          <button className="card-action-button" type="button" onClick={() => void completeTask()} disabled={busy || evidence.loading}>
+          <button className="card-action-button" type="button" onClick={requestCompletion} disabled={busy || evidence.loading}>
             {completing ? <LoaderCircle className="spin" size={17} /> : task.type === 'delivery' ? <PackageCheck size={17} /> : <ImageIcon size={17} />}
             {task.type === 'delivery' ? 'Concluir entrega' : 'Concluir retirada'}
           </button>
         </footer>
+
+        {dispatchConfirmationOpen && (
+          <WhatsAppDispatchDialog
+            actionLabel="A entrega"
+            onCancel={() => setDispatchConfirmationOpen(false)}
+            onConfirm={(sendMessage) => void completeTask(sendMessage)}
+          />
+        )}
       </section>
     </div>
   );

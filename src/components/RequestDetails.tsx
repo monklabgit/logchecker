@@ -6,6 +6,7 @@ import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../
 import { usePersistedEvidence } from '../usePersistedEvidence';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
+import { WhatsAppDispatchDialog } from './WhatsAppDispatchDialog';
 
 type RequestDetailsProps = {
   profile: Profile;
@@ -48,6 +49,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
   const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState('');
   const [releaseSavedMessage, setReleaseSavedMessage] = useState('');
+  const [dispatchConfirmationOpen, setDispatchConfirmationOpen] = useState(false);
   const releaseEvidence = usePersistedEvidence({
     requestId: request.id,
     taskId: null,
@@ -119,7 +121,17 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
     }
   };
 
-  const releasePickup = async () => {
+  const requestRelease = () => {
+    releaseEvidence.setError('');
+    if (!releaseEvidence.hasPending && !releaseEvidence.savedPhotos.length) {
+      releaseEvidence.setError('Salve pelo menos uma foto do material liberado para retirada.');
+      return;
+    }
+    setDispatchConfirmationOpen(true);
+  };
+
+  const releasePickup = async (sendWhatsApp: boolean) => {
+    setDispatchConfirmationOpen(false);
     setReleasing(true);
     setReleaseSavedMessage('');
     releaseEvidence.setError('');
@@ -137,13 +149,15 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
       });
       if (releaseError) throw releaseError;
 
-      notifyWhatsAppOperation(
-        request.id,
-        'release_completed',
-        result.photos.map((photo) => photo.storage_path)
-      ).catch((notificationError) => {
-        console.error('WhatsApp notification failed', notificationError);
-      });
+      if (sendWhatsApp) {
+        notifyWhatsAppOperation(
+          request.id,
+          'release_completed',
+          result.photos.map((photo) => photo.storage_path)
+        ).catch((notificationError) => {
+          console.error('WhatsApp notification failed', notificationError);
+        });
+      }
 
       onChanged();
       onClose();
@@ -320,7 +334,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
               <button
                 className="card-action-button"
                 type="button"
-                onClick={() => void releasePickup()}
+                onClick={requestRelease}
                 disabled={releasing || releaseEvidence.uploading || releaseEvidence.loading}
               >
                 {releasing ? <LoaderCircle className="spin" size={17} /> : <PackageOpen size={17} />}
@@ -328,6 +342,14 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
               </button>
             </div>
           </footer>
+        )}
+
+        {dispatchConfirmationOpen && (
+          <WhatsAppDispatchDialog
+            actionLabel="A liberação para retirada"
+            onCancel={() => setDispatchConfirmationOpen(false)}
+            onConfirm={(sendMessage) => void releasePickup(sendMessage)}
+          />
         )}
 
         {hospitalDetailsOpen && request.hospital_record && (
