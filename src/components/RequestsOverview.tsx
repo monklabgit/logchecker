@@ -422,12 +422,26 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
     setNotice('');
 
     try {
-      const { error: deleteError } = await supabase.rpc('delete_surgery_request_permanently', {
-        target_request_id: request.id,
-      });
-      if (deleteError) throw deleteError;
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('Sessão ausente. Entre novamente para excluir a solicitação.');
 
-      setNotice('Solicitação excluída definitivamente e materiais retornados ao estoque.');
+      const response = await fetch('/api/delete-surgery-request', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requestId: request.id }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string; deletedEvidenceFiles?: number } | null;
+      if (!response.ok) throw new Error(payload?.error || 'Não foi possível excluir a solicitação.');
+
+      const evidenceMessage = payload?.deletedEvidenceFiles
+        ? ` ${payload.deletedEvidenceFiles} arquivo(s) de evidência também foram removidos.`
+        : '';
+      setNotice(`Solicitação excluída definitivamente e materiais retornados ao estoque.${evidenceMessage}`);
       setDeleteRequestTarget(null);
       setSelectedRequest((current) => (current?.id === request.id ? null : current));
       await loadRequests(true);
