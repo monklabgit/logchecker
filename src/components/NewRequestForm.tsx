@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, Check, FileUp, LoaderCircle, Minus, Plus, Save, ScanText, Search, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from '../supabase';
 import type { Hospital, InventoryCategory, InventoryItem } from '../types';
@@ -217,6 +217,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
   const [quickHospitalName, setQuickHospitalName] = useState('');
   const [quickHospitalSaving, setQuickHospitalSaving] = useState(false);
   const [quickHospitalError, setQuickHospitalError] = useState('');
+  const quantityInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const loadHospitals = async () => {
     const { data } = await supabase
@@ -311,6 +312,37 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
   const removeItem = (section: SectionName, id: string) => {
     const nextItems = getItems(section).filter((item) => item.id !== id);
     setItems(section, nextItems.length ? nextItems : [makeEmptyItem()]);
+  };
+
+  const addManualItem = (section: SectionName, afterItemId?: string) => {
+    const currentItems = getItems(section);
+    const currentIndex = afterItemId ? currentItems.findIndex((item) => item.id === afterItemId) : currentItems.length - 1;
+    const insertionIndex = currentIndex >= 0 ? currentIndex + 1 : currentItems.length;
+    const nextItem = currentItems[insertionIndex];
+
+    if (nextItem && !nextItem.quantity.trim() && !nextItem.description.trim() && !nextItem.note.trim()) {
+      window.requestAnimationFrame(() => quantityInputRefs.current[nextItem.id]?.focus());
+      return;
+    }
+
+    const newItem = makeEmptyItem();
+    setItems(section, [
+      ...currentItems.slice(0, insertionIndex),
+      newItem,
+      ...currentItems.slice(insertionIndex),
+    ]);
+    window.requestAnimationFrame(() => quantityInputRefs.current[newItem.id]?.focus());
+  };
+
+  const handleMaterialEnter = (
+    event: ReactKeyboardEvent<HTMLInputElement>,
+    section: SectionName,
+    itemId: string
+  ) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    addManualItem(section, itemId);
   };
 
   const itemsFromExtraction = (section: SectionName, items?: AiMaterialItem[]) => {
@@ -632,7 +664,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
                 placeholder="Buscar material, KIT ou CJK..."
               />
             </label>
-            <button type="button" onClick={() => setItems(section, [...items, makeEmptyItem()])}>
+            <button type="button" onClick={() => addManualItem(section)}>
               <Plus size={17} /> Linha manual
             </button>
           </div>
@@ -657,15 +689,28 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
             <div className={`request-item-row ${item.inventoryItemId ? 'linked' : item.description.trim() ? 'unlinked' : ''}`} key={item.id}>
               <label>
                 <span>Quantidade</span>
-                <input value={item.quantity} onChange={(event) => updateItem(section, item.id, 'quantity', event.target.value)} />
+                <input
+                  ref={(element) => { quantityInputRefs.current[item.id] = element; }}
+                  value={item.quantity}
+                  onChange={(event) => updateItem(section, item.id, 'quantity', event.target.value)}
+                  onKeyDown={(event) => handleMaterialEnter(event, section, item.id)}
+                />
               </label>
               <label>
                 <span>Descrição</span>
-                <input value={item.description} onChange={(event) => updateItem(section, item.id, 'description', event.target.value)} />
+                <input
+                  value={item.description}
+                  onChange={(event) => updateItem(section, item.id, 'description', event.target.value)}
+                  onKeyDown={(event) => handleMaterialEnter(event, section, item.id)}
+                />
               </label>
               <label>
                 <span>Kit / observação</span>
-                <input value={item.note} onChange={(event) => updateItem(section, item.id, 'note', event.target.value)} />
+                <input
+                  value={item.note}
+                  onChange={(event) => updateItem(section, item.id, 'note', event.target.value)}
+                  onKeyDown={(event) => handleMaterialEnter(event, section, item.id)}
+                />
               </label>
               <div className="request-item-actions">
                 {item.description.trim() && (
