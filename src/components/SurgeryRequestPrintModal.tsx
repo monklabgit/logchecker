@@ -126,7 +126,10 @@ export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPri
   const pages = useMemo(() => Array.from({ length: copies }, (_, index) => index + 1), [copies]);
 
   useEffect(() => {
-    const finishPrinting = () => document.body.classList.remove('printing-surgery-request');
+    const finishPrinting = () => {
+      document.documentElement.classList.remove('printing-mobile-surgery-request');
+      document.body.classList.remove('printing-surgery-request', 'printing-mobile-surgery-request');
+    };
     window.addEventListener('afterprint', finishPrinting);
     return () => {
       window.removeEventListener('afterprint', finishPrinting);
@@ -135,7 +138,10 @@ export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPri
   }, []);
 
   const print = () => {
+    const isMobilePrint = window.matchMedia('(max-width: 720px)').matches;
+    document.documentElement.classList.toggle('printing-mobile-surgery-request', isMobilePrint);
     document.body.classList.add('printing-surgery-request');
+    document.body.classList.toggle('printing-mobile-surgery-request', isMobilePrint);
     window.setTimeout(() => window.print(), 80);
   };
 

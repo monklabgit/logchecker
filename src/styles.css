@@ -5277,4 +5277,36 @@ select:focus {
   .print-signature p {
     font-size: 10px;
   }
+
+  html.printing-mobile-surgery-request,
+  html.printing-mobile-surgery-request body {
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.printing-mobile-surgery-request > .surgery-print-portal,
+  body.printing-mobile-surgery-request .print-preview-backdrop,
+  body.printing-mobile-surgery-request .print-preview-dialog,
+  body.printing-mobile-surgery-request .print-pages-preview {
+    width: 209mm !important;
+    max-width: 209mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body.printing-mobile-surgery-request .surgery-print-page,
+  body.printing-mobile-surgery-request .surgery-print-page.compact {
+    width: 209mm;
+    max-width: 209mm;
+    height: 296mm;
+    min-height: 296mm;
+    max-height: 296mm;
+    margin: 0 auto;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
+  }
 }
