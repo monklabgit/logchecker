@@ -11,6 +11,7 @@ type ExtractionResult = {
   surgeryDate: string;
   surgeryTime: string;
   procedure: string;
+  insurance: string;
   cmeItems: MaterialItem[];
   opmeItems: MaterialItem[];
   receivedCme: string;
@@ -33,6 +34,7 @@ const emptyResult: ExtractionResult = {
   surgeryDate: '',
   surgeryTime: '',
   procedure: '',
+  insurance: '',
   cmeItems: [],
   opmeItems: [],
   receivedCme: '',
@@ -71,6 +73,10 @@ const extractionSchema = {
     surgeryDate: { type: 'string' },
     surgeryTime: { type: 'string' },
     procedure: { type: 'string' },
+    insurance: {
+      type: 'string',
+      description: 'Convênio ou plano informado no documento, por exemplo SUS, Unimed ou particular. Vazio se ausente.',
+    },
     cmeItems: {
       type: 'array',
       items: itemSchema,
@@ -105,6 +111,7 @@ const extractionSchema = {
     'surgeryDate',
     'surgeryTime',
     'procedure',
+    'insurance',
     'cmeItems',
     'opmeItems',
     'receivedCme',
@@ -190,7 +197,7 @@ export default async function handler(req: any, res: any) {
               type: 'input_text',
               text:
                 'Extraia os dados deste arquivo brasileiro de solicitacao de cirurgia ou movimentacao de materiais da empresa Marja. ' +
-                'Leia tabelas CME e OPME com cuidado. Nao invente informacoes. ' +
+                'Leia o campo CONVÊNIO e as tabelas CME e OPME com cuidado. Nao invente informacoes. ' +
                 'Se um campo ou assinatura nao estiver claramente legivel, retorne string vazia. ' +
                 'Preserve nomes em maiusculas quando o documento estiver em maiusculas. ' +
                 'Para cada material, separe quantidade, descricao e observacao/kit. ' +

@@ -22,6 +22,7 @@ type RequestForm = {
   surgeryDate: string;
   surgeryTime: string;
   procedure: string;
+  insurance: string;
   observation: string;
 };
 
@@ -38,6 +39,7 @@ type ExtractionResult = {
   surgeryDate?: string;
   surgeryTime?: string;
   procedure?: string;
+  insurance?: string;
   observation?: string;
   cmeItems?: AiMaterialItem[];
   opmeItems?: AiMaterialItem[];
@@ -57,6 +59,7 @@ const initialForm: RequestForm = {
   surgeryDate: '',
   surgeryTime: '',
   procedure: '',
+  insurance: '',
   observation: '',
 };
 
@@ -412,6 +415,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
       surgeryDate: normalizeExtractedDate(result.surgeryDate) || current.surgeryDate,
       surgeryTime: normalizeExtractedTime(result.surgeryTime) || current.surgeryTime,
       procedure: result.procedure || current.procedure,
+      insurance: result.insurance || current.insurance,
       observation: result.observation || current.observation,
     }));
     setCmeItems(nextCmeItems);
@@ -578,6 +582,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
           surgery_date: form.surgeryDate,
           surgery_time: form.surgeryTime,
           procedure: form.procedure,
+          insurance: form.insurance,
           observation: form.observation,
           priority,
           origin,
@@ -770,6 +775,10 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
           <label>
             <span>Horário</span>
             <input type="time" value={form.surgeryTime} onChange={(event) => updateForm('surgeryTime', event.target.value)} />
+          </label>
+          <label>
+            <span>Convênio</span>
+            <input value={form.insurance} onChange={(event) => updateForm('insurance', event.target.value)} placeholder="Ex.: SUS, Unimed, particular" />
           </label>
           <label>
             <span>Prioridade</span>

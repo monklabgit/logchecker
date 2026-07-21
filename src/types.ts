@@ -132,6 +132,7 @@ export type SurgeryRequest = {
   surgery_date: string | null;
   surgery_time: string | null;
   procedure: string;
+  insurance: string;
   observation: string;
   origin: 'manual' | 'image' | 'document';
   status: RequestStatus;

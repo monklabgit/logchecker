@@ -161,6 +161,7 @@ const buildNotificationMessage = (
     surgery_date: string | null;
     surgery_time: string | null;
     procedure: string;
+    insurance: string;
     request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
     transport_tasks: Array<{
       type: string;
@@ -200,6 +201,7 @@ const buildNotificationMessage = (
     `Data da Cirurgia: ${formatDate(request.surgery_date)}`,
     `Horário da Cirurgia: ${formatTime(request.surgery_time)}`,
     `Procedimento: ${request.procedure || 'Não informado'}`,
+    `Convênio: ${request.insurance || 'Não informado'}`,
     '===============',
     sectionBlock(request, 'CME'),
     '----------',
@@ -428,7 +430,7 @@ export default async function handler(req: any, res: any) {
       const [{ data: request, error: requestError }, { data: profile }] = await Promise.all([
         supabase
           .from('surgery_requests')
-          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, request_items(section, quantity, description, note), transport_tasks(type, status, completed_at, delivery_received_cme, delivery_received_opme, delivery_observation)')
+          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, insurance, request_items(section, quantity, description, note), transport_tasks(type, status, completed_at, delivery_received_cme, delivery_received_opme, delivery_observation)')
           .eq('id', body.requestId)
           .single(),
         supabase.from('profiles').select('full_name').eq('id', profileId).maybeSingle(),
@@ -497,6 +499,7 @@ export default async function handler(req: any, res: any) {
         surgery_date: string | null;
         surgery_time: string | null;
         procedure: string;
+        insurance: string;
         request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
         transport_tasks: Array<{
           type: string;

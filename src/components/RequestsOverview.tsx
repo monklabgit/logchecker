@@ -22,6 +22,7 @@ type EditForm = {
   surgeryDate: string;
   surgeryTime: string;
   procedure: string;
+  insurance: string;
   observation: string;
   priority: string;
 };
@@ -96,6 +97,7 @@ const formFromRequest = (request: SurgeryRequest): EditForm => ({
   surgeryDate: request.surgery_date || '',
   surgeryTime: request.surgery_time ? request.surgery_time.slice(0, 5) : '',
   procedure: request.procedure,
+  insurance: request.insurance,
   observation: request.observation,
   priority: String(request.priority || 2),
 });
@@ -133,7 +135,8 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
     setCreatingRequest(false);
     setNotice('Solicitação salva com sucesso e disponível para entrega.');
     onRequestCreated?.(requestId);
-    await loadRequests(true);
+    const nextRequests = await loadRequests(true);
+    setSelectedRequest(nextRequests.find((request) => request.id === requestId) || null);
   };
 
   const loadRequests = async (quiet = false) => {
@@ -147,14 +150,17 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
       )
       .order('created_at', { ascending: false });
 
-    if (queryError) setError(queryError.message);
-    else {
+    if (queryError) {
+      setError(queryError.message);
+      setLoading(false);
+      return [] as SurgeryRequest[];
+    } else {
       const nextRequests = (data || []) as unknown as SurgeryRequest[];
       setRequests(nextRequests);
       setSelectedRequest((current) => (current ? nextRequests.find((request) => request.id === current.id) || null : null));
+      setLoading(false);
+      return nextRequests;
     }
-
-    setLoading(false);
   };
 
   const loadHospitals = async () => {
@@ -199,6 +205,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
           String(request.code),
           request.hospital,
           request.procedure,
+          request.insurance,
           request.patient,
           request.surgeon,
           request.request_items.map((item) => item.description).join(' '),
@@ -323,6 +330,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
           surgery_date: editForm.surgeryDate || null,
           surgery_time: editForm.surgeryTime || null,
           procedure: editForm.procedure.trim(),
+          insurance: editForm.insurance.trim(),
           observation: editForm.observation.trim(),
           priority: Number(editForm.priority),
         })
@@ -708,6 +716,10 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                 <label>
                   <span>Horário</span>
                   <input type="time" value={editForm.surgeryTime} onChange={(event) => updateEditForm('surgeryTime', event.target.value)} />
+                </label>
+                <label>
+                  <span>Convênio</span>
+                  <input value={editForm.insurance} onChange={(event) => updateEditForm('insurance', event.target.value)} />
                 </label>
                 <label>
                   <span>Prioridade</span>

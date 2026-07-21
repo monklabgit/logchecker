@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Save, Send, UserRound, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Printer, Save, Send, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
@@ -7,6 +7,7 @@ import { usePersistedEvidence } from '../usePersistedEvidence';
 import { notifyWhatsAppOperation } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
 import { KitControlModal } from './KitControlModal';
+import { SurgeryRequestPrintModal } from './SurgeryRequestPrintModal';
 import { WhatsAppDispatchDialog } from './WhatsAppDispatchDialog';
 
 type RequestDetailsProps = {
@@ -54,6 +55,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
   const [dispatchConfirmationOpen, setDispatchConfirmationOpen] = useState(false);
   const [kitControlOpen, setKitControlOpen] = useState(false);
   const [kitControlDispatchOnOpen, setKitControlDispatchOnOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
   const releaseEvidence = usePersistedEvidence({
     requestId: request.id,
     taskId: null,
@@ -193,9 +195,14 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             </div>
             <p>{request.procedure || 'Procedimento não informado'}</p>
           </div>
-          <button className="icon-button" type="button" onClick={closeSafely} aria-label="Fechar detalhes">
-            <X size={20} />
-          </button>
+          <div className="details-header-actions">
+            <button className="icon-button" type="button" onClick={() => setPrintOpen(true)} aria-label="Imprimir solicitação" title="Imprimir solicitação">
+              <Printer size={19} />
+            </button>
+            <button className="icon-button" type="button" onClick={closeSafely} aria-label="Fechar detalhes">
+              <X size={20} />
+            </button>
+          </div>
         </header>
 
         <div className="details-body">
@@ -209,6 +216,10 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
               <div>
                 <dt><UserRound size={15} /> Cirurgião</dt>
                 <dd>{request.surgeon || 'Não informado'}</dd>
+              </div>
+              <div>
+                <dt>Convênio</dt>
+                <dd>{request.insurance || 'Não informado'}</dd>
               </div>
               <div>
                 <dt><CalendarDays size={15} /> Cirurgia</dt>
@@ -390,6 +401,8 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             </div>
           </footer>
         )}
+
+        {printOpen && <SurgeryRequestPrintModal request={request} onClose={() => setPrintOpen(false)} />}
 
         {kitControlOpen && (
           <KitControlModal

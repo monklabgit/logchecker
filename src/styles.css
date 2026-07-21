@@ -4651,3 +4651,615 @@ select:focus {
     width: 100%;
   }
 }
+
+
+.details-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.print-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(7, 25, 47, 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.print-preview-dialog {
+  display: grid;
+  width: min(1080px, 100%);
+  max-height: calc(100vh - 36px);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 10px;
+  background: #e8edf2;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+}
+
+.print-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.print-preview-toolbar h2 {
+  margin: 2px 0 0;
+  color: var(--navy);
+  font-size: 19px;
+}
+
+.print-preview-toolbar > div:first-child > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.print-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.print-copy-stepper {
+  display: flex;
+  height: 42px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.print-copy-stepper button {
+  display: grid;
+  width: 38px;
+  place-items: center;
+  border: 0;
+  background: var(--surface-alt);
+  color: var(--navy);
+}
+
+.print-copy-stepper button:disabled {
+  opacity: 0.4;
+}
+
+.print-copy-stepper label {
+  display: grid;
+  width: 62px;
+  place-content: center;
+  text-align: center;
+}
+
+.print-copy-stepper label span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.print-copy-stepper input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+  appearance: textfield;
+}
+
+.print-copy-stepper input::-webkit-inner-spin-button,
+.print-copy-stepper input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.print-pages-preview {
+  display: grid;
+  gap: 24px;
+  overflow: auto;
+  padding: 24px;
+}
+
+.surgery-print-page {
+  position: relative;
+  display: flex;
+  width: min(210mm, 100%);
+  aspect-ratio: 210 / 297;
+  flex-direction: column;
+  justify-self: center;
+  overflow: hidden;
+  padding: clamp(18px, 4.6vw, 12mm);
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 10px 30px rgba(7, 25, 47, 0.2);
+}
+
+.print-page-border {
+  position: absolute;
+  inset: 5mm;
+  z-index: 0;
+  border: 0.25mm solid #555;
+  pointer-events: none;
+}
+
+.print-watermark {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  z-index: 0;
+  width: 72%;
+  max-height: 38%;
+  object-fit: contain;
+  opacity: 0.075;
+  transform: translate(-50%, -50%);
+  filter: grayscale(1);
+}
+
+.surgery-print-page > :not(.print-page-border, .print-watermark) {
+  position: relative;
+  z-index: 1;
+}
+
+.print-document-header {
+  display: grid;
+  min-height: 28mm;
+  grid-template-columns: 34mm minmax(0, 1fr) 24mm;
+  align-items: start;
+  gap: 5mm;
+}
+
+.print-marja-logo {
+  width: 34mm;
+  max-height: 20mm;
+  object-fit: contain;
+  object-position: left top;
+}
+
+.print-qr-block {
+  display: grid;
+  justify-items: center;
+  gap: 0.7mm;
+}
+
+.print-qr-block span {
+  font-size: 6px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.print-qr-code {
+  width: 22mm;
+  height: 22mm;
+  object-fit: contain;
+}
+
+.print-company-name {
+  display: grid;
+  align-self: center;
+  justify-items: center;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: underline;
+}
+
+.print-document-title {
+  position: relative;
+  width: 72%;
+  min-height: 12mm;
+  margin: 2mm auto 4mm;
+  border: 0.3mm solid #333;
+  background: rgba(210, 210, 210, 0.72);
+}
+
+.print-document-title h1 {
+  display: grid;
+  min-height: 12mm;
+  margin: 0;
+  place-items: center;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.print-document-title span {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 4mm);
+  font-size: 10px;
+  font-weight: 800;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.surgery-print-page table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.print-request-details {
+  margin-bottom: 4mm;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.print-request-details th,
+.print-request-details td {
+  height: 4.3mm;
+  padding: 0.6mm 1.5mm;
+  border: 0.2mm solid #777;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.print-request-details th {
+  width: 31mm;
+  background: rgba(215, 215, 215, 0.7);
+  font-size: 8px;
+}
+
+.print-request-details td {
+  font-weight: 700;
+}
+
+.print-material-section {
+  margin-top: 1mm;
+}
+
+.print-material-section h2 {
+  display: grid;
+  width: 50%;
+  min-height: 8mm;
+  margin: 0 auto 1.5mm;
+  place-items: center;
+  border: 0.25mm solid #555;
+  background: rgba(210, 210, 210, 0.72);
+  font-size: 11px;
+}
+
+.print-material-section table {
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.print-material-section th,
+.print-material-section td {
+  height: 5.2mm;
+  padding: 0.7mm 1.3mm;
+  border: 0.2mm solid #666;
+  overflow-wrap: anywhere;
+  line-height: 1.12;
+}
+
+.print-material-section th {
+  background: #252525;
+  color: #fff;
+  font-size: 7px;
+  text-align: center;
+}
+
+.print-material-section th:first-child,
+.print-material-section td:first-child {
+  width: 28mm;
+}
+
+.print-material-section th:last-child,
+.print-material-section td:last-child {
+  width: 36mm;
+}
+
+.print-material-section td:nth-child(2) {
+  font-weight: 700;
+}
+
+.print-signature-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18mm;
+  margin: 8mm 8mm 5mm;
+}
+
+.print-signature-row.single {
+  width: 48%;
+  grid-template-columns: 1fr;
+  align-self: center;
+  margin-top: 10mm;
+}
+
+.print-signature span {
+  display: block;
+  border-top: 0.25mm solid #222;
+}
+
+.print-signature p {
+  margin: 1mm 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 9px;
+  font-style: italic;
+  text-align: center;
+}
+
+.surgery-print-page.compact .print-request-details th,
+.surgery-print-page.compact .print-request-details td {
+  height: 3.7mm;
+}
+
+.surgery-print-page.compact .print-material-section th,
+.surgery-print-page.compact .print-material-section td {
+  height: 4mm;
+  font-size: 7px;
+}
+
+.surgery-print-page.compact .print-signature-row {
+  margin-top: 5mm;
+  margin-bottom: 3mm;
+}
+
+@media (max-width: 720px) {
+  .print-preview-backdrop {
+    padding: 0;
+  }
+
+  .print-preview-dialog {
+    width: 100%;
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .print-preview-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .print-preview-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .print-copy-stepper {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .print-copy-stepper label {
+    flex: 1 1 auto;
+  }
+
+  .print-preview-actions .card-action-button {
+    padding-inline: 13px;
+  }
+
+  .print-pages-preview {
+    padding: 12px;
+  }
+
+  .surgery-print-page {
+    padding: 16px;
+  }
+
+  .print-document-header {
+    min-height: 18vw;
+    grid-template-columns: 24% minmax(0, 1fr) 16%;
+    gap: 3%;
+  }
+
+  .print-marja-logo,
+  .print-qr-code {
+    width: 100%;
+    height: auto;
+    max-height: 15vw;
+  }
+
+  .print-qr-block span {
+    font-size: 4px;
+  }
+
+  .print-company-name {
+    font-size: 6px;
+  }
+
+  .print-document-title h1 {
+    min-height: 8mm;
+    font-size: 10px;
+  }
+
+  .print-document-title {
+    min-height: 8mm;
+    margin-bottom: 2mm;
+  }
+
+  .print-request-details,
+  .print-material-section table {
+    font-size: 5px;
+  }
+
+  .print-request-details th {
+    width: 19%;
+    font-size: 5px;
+  }
+
+  .print-request-details th,
+  .print-request-details td,
+  .print-material-section th,
+  .print-material-section td {
+    height: auto;
+    min-height: 0;
+    padding: 1px 3px;
+  }
+
+  .print-material-section h2 {
+    min-height: 5mm;
+    font-size: 7px;
+  }
+
+  .print-signature-row {
+    margin: 4vw 4vw 2vw;
+    gap: 8vw;
+  }
+
+  .print-signature-row.single {
+    margin-top: 5vw;
+  }
+
+  .print-signature p {
+    font-size: 5px;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 210mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.printing-surgery-request > #root {
+    display: none !important;
+  }
+
+  body.printing-surgery-request > .surgery-print-portal {
+    display: block !important;
+  }
+
+  .print-preview-backdrop,
+  .print-preview-dialog,
+  .print-pages-preview {
+    position: static;
+    display: block;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .print-preview-toolbar {
+    display: none !important;
+  }
+
+  .surgery-print-page,
+  .surgery-print-page.compact {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    aspect-ratio: auto;
+    break-after: page;
+    page-break-after: always;
+    margin: 0;
+    padding: 12mm;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .surgery-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .print-document-header {
+    min-height: 28mm;
+    grid-template-columns: 34mm minmax(0, 1fr) 24mm;
+    gap: 5mm;
+  }
+
+  .print-marja-logo {
+    width: 34mm;
+    max-height: 20mm;
+  }
+
+  .print-qr-code {
+    width: 22mm;
+    height: 22mm;
+  }
+
+  .print-qr-block span {
+    font-size: 6px;
+  }
+
+  .print-company-name {
+    font-size: 10px;
+  }
+
+  .print-document-title,
+  .print-document-title h1 {
+    min-height: 12mm;
+  }
+
+  .print-document-title h1 {
+    font-size: 16px;
+  }
+
+  .print-request-details,
+  .print-material-section table {
+    font-size: 8px;
+  }
+
+  .print-request-details th {
+    width: 31mm;
+    font-size: 8px;
+  }
+
+  .print-request-details th,
+  .print-request-details td {
+    height: 4.3mm;
+    padding: 0.6mm 1.5mm;
+  }
+
+  .print-material-section h2 {
+    min-height: 8mm;
+    font-size: 11px;
+  }
+
+  .print-material-section th,
+  .print-material-section td {
+    height: 5.2mm;
+    padding: 0.7mm 1.3mm;
+    font-size: 8px;
+  }
+
+  .surgery-print-page.compact .print-material-section th,
+  .surgery-print-page.compact .print-material-section td {
+    height: 4mm;
+    font-size: 7px;
+  }
+
+  .print-signature-row {
+    margin: 8mm 8mm 5mm;
+    gap: 18mm;
+  }
+
+  .print-signature-row.single {
+    margin-top: 10mm;
+  }
+
+  .print-signature p {
+    font-size: 9px;
+  }
+}
