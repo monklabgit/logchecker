@@ -18,12 +18,14 @@ const supabasePublishableKey =
   'sb_publishable_vjE_pfGQ3RDyQo4UoItU6w_gvnmeTUy';
 
 type NotifyEventType = 'delivery_completed' | 'release_completed' | 'pickup_completed' | 'kit_control';
+type KitControlDispatchMode = 'pending' | 'current' | 'all';
 
 type WhatsappBody = {
   action?: string;
   requestId?: string;
   eventType?: NotifyEventType;
   photoPaths?: string[];
+  selectionMode?: KitControlDispatchMode;
   logisticsGroupJid?: string;
   logisticsGroupName?: string;
   kitControlGroupJid?: string;
@@ -171,7 +173,8 @@ const buildNotificationMessage = (
   },
   eventType: NotifyEventType,
   actorName: string,
-  photoCount: number
+  photoCount: number,
+  kitControlSummary?: { total: number; mode: KitControlDispatchMode }
 ) => {
   const codeLabel = requestCodeLabel(request.code);
   const title = `${titleForEvent(eventType)} - ${request.hospital}`;
@@ -204,7 +207,15 @@ const buildNotificationMessage = (
     '===============',
     ...deliveryReceipt,
     `${actionLineForEvent(eventType)}: ${actorName || 'Usuário LogChecker'}`,
-    photoCount ? `Evidências: ${photoCount} foto${photoCount === 1 ? '' : 's'}` : '',
+    eventType === 'kit_control' && kitControlSummary
+      ? `Evidências enviadas agora: ${photoCount}`
+      : photoCount ? `Evidências: ${photoCount} foto${photoCount === 1 ? '' : 's'}` : '',
+    eventType === 'kit_control' && kitControlSummary
+      ? `Total registrado na solicitação: ${kitControlSummary.total}`
+      : '',
+    eventType === 'kit_control' && kitControlSummary
+      ? `Tipo do envio: ${{ pending: 'Pendentes', current: 'Adicionadas agora', all: 'Todas' }[kitControlSummary.mode]}`
+      : '',
     '===============',
   ].filter(Boolean).join('\n');
 };
@@ -468,6 +479,8 @@ export default async function handler(req: any, res: any) {
             .select('storage_path, original_name, mime_type')
             .eq('request_id', body.requestId)
             .eq('photo_type', photoTypeForEvent(body.eventType))
+            .not('finalized_at', 'is', null)
+            .gt('expires_at', new Date().toISOString())
             .in('storage_path', photoPaths)
         : { data: [], error: null };
       if (photoResult.error) throw photoResult.error;
@@ -476,30 +489,25 @@ export default async function handler(req: any, res: any) {
         throw new Error('Nenhuma foto válida de Controle de Kits foi encontrada.');
       }
 
-      const message = buildNotificationMessage(
-        request as {
-          code: number;
-          hospital: string;
-          surgeon: string;
-          patient: string;
-          surgery_date: string | null;
-          surgery_time: string | null;
-          procedure: string;
-          request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
-          transport_tasks: Array<{
-            type: string;
-            status: string;
-            completed_at: string | null;
-            delivery_received_cme: string;
-            delivery_received_opme: string;
-            delivery_observation: string;
-          }>;
-        },
-        body.eventType,
-        profile?.full_name || userData.user.email || '',
-        photos?.length || 0
-      );
-      const codeLabel = requestCodeLabel((request as { code?: number } | null)?.code);
+      const typedRequest = request as {
+        code: number;
+        hospital: string;
+        surgeon: string;
+        patient: string;
+        surgery_date: string | null;
+        surgery_time: string | null;
+        procedure: string;
+        request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
+        transport_tasks: Array<{
+          type: string;
+          status: string;
+          completed_at: string | null;
+          delivery_received_cme: string;
+          delivery_received_opme: string;
+          delivery_observation: string;
+        }>;
+      };
+      const codeLabel = requestCodeLabel(typedRequest.code);
       const targetGroupJid = body.eventType === 'kit_control'
         ? activeConnection.kit_control_group_jid
         : activeConnection.group_jid;
@@ -509,16 +517,100 @@ export default async function handler(req: any, res: any) {
           : 'O grupo de Logística não está configurado.');
       }
 
+      if (body.eventType === 'kit_control') {
+        const selectionMode: KitControlDispatchMode = ['pending', 'current', 'all'].includes(body.selectionMode || '')
+          ? body.selectionMode as KitControlDispatchMode
+          : 'pending';
+        const { count: totalEvidence, error: totalError } = await supabase
+          .from('transport_evidence_photos')
+          .select('id', { count: 'exact', head: true })
+          .eq('request_id', body.requestId)
+          .eq('photo_type', 'kit_control')
+          .not('finalized_at', 'is', null)
+          .gt('expires_at', new Date().toISOString());
+        if (totalError) throw totalError;
+
+        const sentPaths: string[] = [];
+        const failedPaths: string[] = [];
+        for (const photo of photos) {
+          try {
+            const { data: signed, error: signedError } = await supabase.storage
+              .from('transport-evidence-photos')
+              .createSignedUrl(photo.storage_path, 60 * 20);
+            if (signedError || !signed?.signedUrl) throw signedError || new Error('Não foi possível acessar a imagem.');
+            await evolutionFetch(`/message/sendMedia/${encodeURIComponent(activeConnection.instance_name)}`, {
+              method: 'POST',
+              body: JSON.stringify({
+                number: targetGroupJid,
+                mediatype: 'image',
+                mimetype: photo.mime_type || 'image/jpeg',
+                media: signed.signedUrl,
+                fileName: photo.original_name || 'evidencia.jpg',
+                caption: `${titleForEvent(body.eventType)} ${codeLabel}`,
+              }),
+            });
+            sentPaths.push(photo.storage_path);
+          } catch (mediaError) {
+            failedPaths.push(photo.storage_path);
+            console.error('Kit Control media send failed', {
+              requestId: body.requestId,
+              storagePath: photo.storage_path,
+              error: mediaError instanceof Error ? mediaError.message : mediaError,
+            });
+          }
+        }
+
+        if (!sentPaths.length) {
+          throw new Error('Nenhuma foto foi enviada. As evidências continuam pendentes para uma nova tentativa.');
+        }
+
+        const { error: markError } = await supabase.rpc('mark_kit_control_evidence_sent', {
+          target_request_id: body.requestId,
+          target_storage_paths: sentPaths,
+        });
+        if (markError) throw markError;
+
+        const message = buildNotificationMessage(
+          typedRequest,
+          body.eventType,
+          profile?.full_name || userData.user.email || '',
+          sentPaths.length,
+          { total: totalEvidence || sentPaths.length, mode: selectionMode }
+        );
+        await evolutionFetch(`/message/sendText/${encodeURIComponent(activeConnection.instance_name)}`, {
+          method: 'POST',
+          body: JSON.stringify({ number: targetGroupJid, text: message }),
+        });
+
+        console.info('Kit Control WhatsApp notification sent', {
+          requestId: body.requestId,
+          instanceName: activeConnection.instance_name,
+          selectionMode,
+          sentMedia: sentPaths.length,
+          failedMedia: failedPaths.length,
+        });
+        return sendJson(res, failedPaths.length ? 207 : 200, {
+          ok: failedPaths.length === 0,
+          sentMedia: sentPaths.length,
+          failedMedia: failedPaths.length,
+          sentPaths,
+          failedPaths,
+        });
+      }
+
+      const message = buildNotificationMessage(
+        typedRequest,
+        body.eventType,
+        profile?.full_name || userData.user.email || '',
+        photos.length
+      );
       await evolutionFetch(`/message/sendText/${encodeURIComponent(activeConnection.instance_name)}`, {
         method: 'POST',
-        body: JSON.stringify({
-          number: targetGroupJid,
-          text: message,
-        }),
+        body: JSON.stringify({ number: targetGroupJid, text: message }),
       });
 
       let sentMedia = 0;
-      for (const photo of photos || []) {
+      for (const photo of photos) {
         const { data: signed } = await supabase.storage.from('transport-evidence-photos').createSignedUrl(photo.storage_path, 60 * 20);
         if (!signed?.signedUrl) continue;
         await evolutionFetch(`/message/sendMedia/${encodeURIComponent(activeConnection.instance_name)}`, {
@@ -542,7 +634,7 @@ export default async function handler(req: any, res: any) {
         sentMedia,
       });
 
-      return sendJson(res, 200, { ok: true, sentMedia });
+      return sendJson(res, 200, { ok: true, sentMedia, failedMedia: 0 });
     }
 
     return sendJson(res, 400, { error: 'Unknown action' });

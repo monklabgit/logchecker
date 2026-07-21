@@ -1,19 +1,20 @@
-import { LoaderCircle, Save, X } from 'lucide-react';
-import { useState } from 'react';
+import { LoaderCircle, Save, Send, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import type { SurgeryRequest } from '../types';
 import { usePersistedEvidence } from '../usePersistedEvidence';
 import { notifyWhatsAppKitControl } from '../whatsappNotifications';
 import { EvidencePhotoPicker } from './EvidencePhotoPicker';
-import { WhatsAppDispatchDialog } from './WhatsAppDispatchDialog';
+import { KitControlDispatchDialog, type KitControlDispatchMode } from './KitControlDispatchDialog';
 
 type KitControlModalProps = {
   request: SurgeryRequest;
   onClose: () => void;
   onChanged: () => void;
+  initialDispatchOpen?: boolean;
 };
 
-export function KitControlModal({ request, onClose, onChanged }: KitControlModalProps) {
+export function KitControlModal({ request, onClose, onChanged, initialDispatchOpen = false }: KitControlModalProps) {
   const evidence = usePersistedEvidence({
     requestId: request.id,
     taskId: null,
@@ -24,6 +25,10 @@ export function KitControlModal({ request, onClose, onChanged }: KitControlModal
   const [notice, setNotice] = useState('');
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [photoPathsToSend, setPhotoPathsToSend] = useState<string[]>([]);
+  const [initialDispatchHandled, setInitialDispatchHandled] = useState(false);
+
+  const pendingPhotos = evidence.savedPhotos.filter((photo) => !photo.whatsapp_first_sent_at);
+  const currentPhotos = evidence.savedPhotos.filter((photo) => photoPathsToSend.includes(photo.storage_path));
 
   const closeSafely = () => {
     if (evidence.hasPending && !window.confirm('Existem fotos que ainda não foram salvas. Deseja fechar e descartá-las?')) {
@@ -62,24 +67,47 @@ export function KitControlModal({ request, onClose, onChanged }: KitControlModal
     }
   };
 
-  const answerDispatch = async (sendMessage: boolean) => {
+  const answerDispatch = async (mode: KitControlDispatchMode) => {
     setDispatchOpen(false);
-    if (!sendMessage) {
-      setNotice('Fotos salvas sem disparo para o grupo.');
+    const selectedPhotos = mode === 'pending'
+      ? pendingPhotos
+      : mode === 'current'
+        ? currentPhotos
+        : evidence.savedPhotos;
+    if (!selectedPhotos.length) {
+      evidence.setError('Não há fotos disponíveis para a opção selecionada.');
       return;
     }
 
     setSending(true);
     evidence.setError('');
+    setNotice('');
     try {
-      await notifyWhatsAppKitControl(request.id, photoPathsToSend);
-      setNotice('Fotos salvas e mensagem enviada para Conferência de Kits.');
+      const result = await notifyWhatsAppKitControl(
+        request.id,
+        selectedPhotos.map((photo) => photo.storage_path),
+        mode
+      );
+      await evidence.reload();
+      onChanged();
+      if (result.failedMedia) {
+        evidence.setError(`${result.sentMedia} foto(s) enviada(s) e ${result.failedMedia} com erro. As fotos com erro continuam pendentes.`);
+      } else {
+        setNotice(`${result.sentMedia} foto${result.sentMedia === 1 ? '' : 's'} enviada${result.sentMedia === 1 ? '' : 's'} para Conferência de Kits.`);
+      }
     } catch (caughtError) {
-      evidence.setError(caughtError instanceof Error ? caughtError.message : 'As fotos foram salvas, mas a mensagem não foi enviada.');
+      evidence.setError(caughtError instanceof Error ? caughtError.message : 'As fotos estão salvas, mas a mensagem não foi enviada.');
     } finally {
       setSending(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialDispatchOpen || initialDispatchHandled || evidence.loading) return;
+    setInitialDispatchHandled(true);
+    if (evidence.savedPhotos.length) setDispatchOpen(true);
+    else evidence.setError('Ainda não existem fotos salvas para enviar.');
+  }, [evidence.loading, evidence.savedPhotos.length, initialDispatchHandled, initialDispatchOpen]);
 
   const busy = evidence.uploading || saving || sending;
 
@@ -115,21 +143,26 @@ export function KitControlModal({ request, onClose, onChanged }: KitControlModal
           <button className="secondary-button" type="button" onClick={closeSafely} disabled={busy}>
             Fechar
           </button>
-          <button className="card-action-button" type="button" onClick={() => void savePhotos()} disabled={busy || evidence.loading}>
-            {busy ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+          <button className="evidence-save-button" type="button" onClick={() => setDispatchOpen(true)} disabled={busy || evidence.loading || !evidence.savedPhotos.length}>
+            <Send size={17} />
+            Enviar evidências
+          </button>
+          <button className="card-action-button" type="button" onClick={() => void savePhotos()} disabled={busy || evidence.loading || !evidence.hasPending}>
+            {saving || evidence.uploading ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
             Salvar fotos
           </button>
         </footer>
 
         {dispatchOpen && (
-          <WhatsAppDispatchDialog
-            title={'Deseja enviar a mensagem no grupo de "Conferência de Kits"?'}
-            actionLabel="O registro"
-            description="As fotos já estão salvas. O envio da mensagem é opcional."
-            withoutSendLabel="Não enviar"
-            withSendLabel="Sim, enviar"
-            onCancel={() => setDispatchOpen(false)}
-            onConfirm={(sendMessage) => void answerDispatch(sendMessage)}
+          <KitControlDispatchDialog
+            pendingCount={pendingPhotos.length}
+            currentCount={currentPhotos.length}
+            totalCount={evidence.savedPhotos.length}
+            onCancel={() => {
+              setDispatchOpen(false);
+              setNotice('Fotos mantidas sem novo disparo para o grupo.');
+            }}
+            onConfirm={(mode) => void answerDispatch(mode)}
           />
         )}
       </section>

@@ -8,6 +8,7 @@ export type EvidencePickerPhoto = {
   previewUrl: string | null;
   state: 'pending' | 'uploading' | 'saved' | 'error';
   removable: boolean;
+  statusLabel?: string;
 };
 
 type LocalPhoto = {
@@ -24,6 +25,13 @@ type UsePersistedEvidenceOptions = {
   taskId: string | null;
   photoType: EvidencePhotoType;
 };
+
+const sentAtFormatter = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 const signPhoto = async (photo: EvidencePhoto): Promise<SignedEvidencePhoto> => {
   const { data, error } = await supabase.storage
@@ -215,6 +223,11 @@ export function usePersistedEvidence({ requestId, taskId, photoType }: UsePersis
         previewUrl: photo.signedUrl,
         state: 'saved' as const,
         removable: !photo.finalized_at,
+        statusLabel: photoType === 'kit_control'
+          ? photo.whatsapp_last_sent_at
+            ? `Enviada ${sentAtFormatter.format(new Date(photo.whatsapp_last_sent_at))}`
+            : 'Não enviada'
+          : 'Salva',
       })),
       ...localPhotos.map((photo) => ({
         id: photo.id,
@@ -223,7 +236,7 @@ export function usePersistedEvidence({ requestId, taskId, photoType }: UsePersis
         removable: photo.state !== 'uploading',
       })),
     ],
-    [localPhotos, savedPhotos]
+    [localPhotos, photoType, savedPhotos]
   );
 
   return {

@@ -116,7 +116,7 @@ export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel =
               <ImageIcon size={24} aria-label={`Foto salva ${index + 1}`} />
             )}
             <span className="photo-state-label">
-              {photo.state === 'saved' && 'Salva'}
+              {photo.state === 'saved' && (photo.statusLabel || 'Salva')}
               {photo.state === 'pending' && 'Não salva'}
               {photo.state === 'uploading' && 'Enviando'}
               {photo.state === 'error' && 'Erro'}

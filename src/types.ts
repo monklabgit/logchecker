@@ -102,6 +102,9 @@ export type EvidencePhoto = {
   created_at: string;
   expires_at: string;
   finalized_at: string | null;
+  whatsapp_first_sent_at: string | null;
+  whatsapp_last_sent_at: string | null;
+  whatsapp_send_count: number;
 };
 
 export type UserWhatsappConnection = {

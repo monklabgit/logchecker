@@ -3840,7 +3840,15 @@ select:focus {
   font-weight: 700;
 }
 
-.details-kit-control .secondary-button {
+.details-kit-control-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.details-kit-control-actions button {
   flex: 0 0 auto;
 }
 
@@ -3849,7 +3857,72 @@ select:focus {
 }
 
 .kit-control-actions {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.kit-dispatch-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.kit-dispatch-options {
+  display: grid;
+  gap: 9px;
+  padding: 4px 0 18px;
+}
+
+.kit-dispatch-options label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 70px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.kit-dispatch-options label.selected {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.kit-dispatch-options label:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.kit-dispatch-options input {
+  accent-color: var(--teal-dark);
+}
+
+.kit-dispatch-options span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.kit-dispatch-options strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.kit-dispatch-options small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.kit-dispatch-options b {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--navy);
+  font-size: 12px;
 }
 
 .whatsapp-group-settings {
@@ -4374,7 +4447,13 @@ select:focus {
     flex-direction: column;
   }
 
-  .details-kit-control .secondary-button {
+  .details-kit-control-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .details-kit-control-actions button {
     width: 100%;
   }
 

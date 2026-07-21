@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Save, UserRound, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Save, Send, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
@@ -53,14 +53,17 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
   const [releaseSavedMessage, setReleaseSavedMessage] = useState('');
   const [dispatchConfirmationOpen, setDispatchConfirmationOpen] = useState(false);
   const [kitControlOpen, setKitControlOpen] = useState(false);
+  const [kitControlDispatchOnOpen, setKitControlDispatchOnOpen] = useState(false);
   const releaseEvidence = usePersistedEvidence({
     requestId: request.id,
     taskId: null,
     photoType: 'instrumentator_release',
   });
-  const kitControlPhotoCount = request.transport_evidence_photos.filter(
+  const kitControlPhotos = request.transport_evidence_photos.filter(
     (photo) => photo.photo_type === 'kit_control' && new Date(photo.expires_at) > new Date()
-  ).length;
+  );
+  const kitControlPhotoCount = kitControlPhotos.length;
+  const pendingKitControlPhotoCount = kitControlPhotos.filter((photo) => !photo.whatsapp_first_sent_at).length;
   const completedDelivery = request.transport_tasks
     .filter((task) => task.type === 'delivery' && task.status === 'completed')
     .sort((a, b) => (b.completed_at || b.created_at).localeCompare(a.completed_at || a.created_at))[0];
@@ -244,12 +247,37 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             <section className="details-kit-control">
               <div>
                 <h3><ClipboardCheck size={18} /> Controle de Kits</h3>
-                <p>{kitControlPhotoCount ? `${kitControlPhotoCount} foto${kitControlPhotoCount === 1 ? '' : 's'} salva${kitControlPhotoCount === 1 ? '' : 's'}` : 'Nenhuma foto registrada'}</p>
+                <p>
+                  {kitControlPhotoCount
+                    ? `${kitControlPhotoCount} foto${kitControlPhotoCount === 1 ? '' : 's'} · ${pendingKitControlPhotoCount} não enviada${pendingKitControlPhotoCount === 1 ? '' : 's'}`
+                    : 'Nenhuma foto registrada'}
+                </p>
               </div>
-              <button className="secondary-button" type="button" onClick={() => setKitControlOpen(true)}>
-                <ImageIcon size={17} />
-                Anexar fotos
-              </button>
+              <div className="details-kit-control-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setKitControlDispatchOnOpen(false);
+                    setKitControlOpen(true);
+                  }}
+                >
+                  <ImageIcon size={17} />
+                  Anexar fotos
+                </button>
+                <button
+                  className="card-action-button"
+                  type="button"
+                  disabled={!kitControlPhotoCount}
+                  onClick={() => {
+                    setKitControlDispatchOnOpen(true);
+                    setKitControlOpen(true);
+                  }}
+                >
+                  <Send size={17} />
+                  Enviar evidências
+                </button>
+              </div>
             </section>
           )}
 
@@ -366,7 +394,11 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
         {kitControlOpen && (
           <KitControlModal
             request={request}
-            onClose={() => setKitControlOpen(false)}
+            initialDispatchOpen={kitControlDispatchOnOpen}
+            onClose={() => {
+              setKitControlOpen(false);
+              setKitControlDispatchOnOpen(false);
+            }}
             onChanged={onChanged}
           />
         )}
