@@ -94,6 +94,8 @@
 .cme-box-label h2 {
   display: grid;
   min-height: 18mm;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3mm;
   margin: 0;
   padding: 2mm 3mm;
   place-items: center start;
@@ -104,6 +106,21 @@
   line-height: 1.08;
   overflow-wrap: anywhere;
   text-transform: uppercase;
+}
+
+.cme-label-material-name {
+  min-width: 0;
+}
+
+.cme-label-material-note {
+  max-width: 30mm;
+  justify-self: end;
+  padding-left: 3mm;
+  border-left: 0.3mm solid #8290a0;
+  font-size: 14px;
+  line-height: 1.05;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .cme-box-label dl {
@@ -207,6 +224,12 @@
     font-size: 9px;
   }
 
+  .cme-label-material-note {
+    max-width: 14vw;
+    padding-left: 1.2vw;
+    font-size: 6px;
+  }
+
   .cme-box-label dl > div {
     gap: 0;
     padding: 0.6vw 1.2vw;
@@ -260,6 +283,12 @@
 
   .cme-box-label h2 {
     font-size: 21px;
+  }
+
+  .cme-label-material-note {
+    max-width: 30mm;
+    padding-left: 3mm;
+    font-size: 14px;
   }
 
   .cme-box-label dt {

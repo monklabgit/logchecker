@@ -14,7 +14,7 @@ type PrintMode = 'request' | 'labels';
 type CmeLabel = {
   key: string;
   description: string;
-  boxNumber: number;
+  note: string;
   boxCount: number;
 };
 
@@ -45,7 +45,7 @@ const buildCmeLabels = (items: RequestItem[]) =>
       return Array.from({ length: boxCount }, (_, index) => ({
         key: `${item.id}-${index + 1}`,
         description: item.description.trim(),
-        boxNumber: index + 1,
+        note: item.note.trim(),
         boxCount,
       }));
     });
@@ -162,9 +162,12 @@ function CmeLabelsSheet({ request, labels, page }: { request: SurgeryRequest; la
         <section className="cme-box-label" key={label.key}>
           <header>
             <span>CAIXA CME</span>
-            <small>{label.boxCount > 1 ? `${label.boxNumber} de ${label.boxCount}` : '1 caixa'}</small>
+            <small>{label.boxCount === 1 ? '1 caixa' : `${label.boxCount} caixas`}</small>
           </header>
-          <h2>{label.description}</h2>
+          <h2>
+            <span className="cme-label-material-name">{label.description}</span>
+            {label.note && <span className="cme-label-material-note">{label.note}</span>}
+          </h2>
           <dl>
             <div>
               <dt>Cirurgião</dt>
