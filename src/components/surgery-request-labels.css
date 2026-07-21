@@ -1,0 +1,261 @@
+.print-preview-summary {
+  display: grid;
+  min-width: 0;
+}
+
+.print-mode-switch {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.print-mode-switch button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-alt);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.print-mode-switch button.active {
+  border-color: rgba(13, 139, 134, 0.38);
+  background: #e7f7f6;
+  color: var(--teal-dark);
+}
+
+.print-mode-switch button strong {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--navy);
+  font-size: 11px;
+}
+
+.print-pages-preview.labels-preview {
+  align-items: start;
+}
+
+.cme-labels-print-page {
+  display: grid;
+  width: min(210mm, 100%);
+  aspect-ratio: 210 / 297;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 4mm;
+  justify-self: center;
+  padding: 8mm;
+  background: #fff;
+  color: #07192f;
+  box-shadow: 0 10px 30px rgba(7, 25, 47, 0.2);
+}
+
+.cme-box-label {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden;
+  border: 0.35mm dashed #5e6d7c;
+  background: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.cme-box-label > header {
+  display: flex;
+  min-height: 9mm;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3mm;
+  padding: 1.5mm 3mm;
+  background: #0b3568;
+  color: #fff;
+}
+
+.cme-box-label > header span {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.cme-box-label > header small {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.cme-box-label h2 {
+  display: grid;
+  min-height: 18mm;
+  margin: 0;
+  padding: 2mm 3mm;
+  place-items: center start;
+  border-bottom: 0.25mm solid #8290a0;
+  color: #07192f;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.cme-box-label dl {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: 1.25fr 0.75fr;
+  margin: 0;
+}
+
+.cme-box-label dl > div {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.4mm;
+  padding: 1.3mm 2.5mm;
+  border-right: 0.2mm solid #a2abb5;
+  border-bottom: 0.2mm solid #a2abb5;
+}
+
+.cme-box-label dl > div:nth-child(2),
+.cme-box-label dl > div:nth-child(4) {
+  border-right: 0;
+}
+
+.cme-box-label dl > .cme-label-procedure {
+  grid-column: 1 / -1;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.cme-box-label dt {
+  color: #536273;
+  font-size: 7px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cme-box-label dd {
+  min-width: 0;
+  margin: 0;
+  color: #07192f;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.cme-labels-empty {
+  display: grid;
+  min-height: 240px;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.cme-labels-empty strong {
+  color: var(--navy);
+}
+
+@media (max-width: 720px) {
+  .print-mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .print-mode-switch button {
+    justify-content: center;
+    padding-inline: 7px;
+    font-size: 10px;
+  }
+
+  .print-preview-actions:has(.print-copy-stepper) {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .print-preview-actions:not(:has(.print-copy-stepper)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .cme-labels-print-page {
+    padding: 3.8vw;
+    gap: 1.8vw;
+  }
+
+  .cme-box-label > header {
+    min-height: 4vw;
+    padding: 0.7vw 1.4vw;
+  }
+
+  .cme-box-label > header span,
+  .cme-box-label > header small {
+    font-size: 5px;
+  }
+
+  .cme-box-label h2 {
+    min-height: 8.5vw;
+    padding: 1vw 1.4vw;
+    font-size: 7px;
+  }
+
+  .cme-box-label dl > div {
+    gap: 0;
+    padding: 0.6vw 1.2vw;
+  }
+
+  .cme-box-label dt {
+    font-size: 3.5px;
+  }
+
+  .cme-box-label dd {
+    font-size: 4.8px;
+  }
+}
+
+@media print {
+  .cme-labels-print-page {
+    display: grid;
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    aspect-ratio: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    gap: 4mm;
+    break-after: page;
+    page-break-after: always;
+    margin: 0;
+    padding: 8mm;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .cme-labels-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .cme-box-label {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.printing-mobile-surgery-request .cme-labels-print-page {
+    width: 209mm;
+    max-width: 209mm;
+    height: 296mm;
+    min-height: 296mm;
+    max-height: 296mm;
+    margin: 0 auto;
+  }
+}
