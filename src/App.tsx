@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Archive, Building2, ListChecks, LoaderCircle, LogOut, Menu, RefreshCw, Route, Settings, ShieldAlert, User, Users } from 'lucide-react';
+import { Archive, Building2, CalendarDays, ListChecks, LoaderCircle, LogOut, Menu, RefreshCw, Route, Settings, ShieldAlert, User, Users } from 'lucide-react';
 import { AuthScreen } from './AuthScreen';
 import { HospitalsAdmin } from './components/HospitalsAdmin';
 import { InventoryAdmin } from './components/InventoryAdmin';
 import { OperationsDashboard } from './components/OperationsDashboard';
 import { RequestsOverview } from './components/RequestsOverview';
+import { SurgeryAgenda } from './components/SurgeryAgenda';
 import { UserSettingsPage } from './components/UserSettingsModal';
 import { UsersAdmin } from './components/UsersAdmin';
 import { DEFAULT_ROLE_ACCESS, emptyAccessMap } from './permissions';
 import { supabase } from './supabase';
 import type { Profile, RoleAccessScope } from './types';
 
-type AppView = 'flow' | 'requests' | 'inventory' | 'hospitals' | 'users' | 'settings';
+type AppView = 'flow' | 'requests' | 'agenda' | 'inventory' | 'hospitals' | 'users' | 'settings';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -163,6 +164,7 @@ function App() {
     const access = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
     const canFlow = access.view_dashboard;
     const canRequests = ['admin', 'office'].includes(profile.role);
+    const canAgenda = access.view_agenda;
     const canInventory = access.manage_inventory;
     const canHospitals = access.manage_hospitals;
     const canUsers = profile.role === 'admin' || access.manage_users;
@@ -171,6 +173,7 @@ function App() {
     const allowed =
       (view === 'flow' && canFlow) ||
       (view === 'requests' && canRequests) ||
+      (view === 'agenda' && canAgenda) ||
       (view === 'inventory' && canInventory) ||
       (view === 'hospitals' && canHospitals) ||
       (view === 'users' && canUsers) ||
@@ -178,7 +181,7 @@ function App() {
 
     if (allowed) return;
 
-    setView(canRequests ? 'requests' : canFlow ? 'flow' : canInventory ? 'inventory' : canHospitals ? 'hospitals' : 'users');
+    setView(canRequests ? 'requests' : canFlow ? 'flow' : canAgenda ? 'agenda' : canInventory ? 'inventory' : canHospitals ? 'hospitals' : 'users');
   }, [profile, roleAccess, view]);
 
   const signOut = async () => {
@@ -241,6 +244,7 @@ function App() {
   const currentAccess = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
   const canViewFlow = currentAccess.view_dashboard;
   const canViewRequests = ['admin', 'office'].includes(profile.role);
+  const canViewAgenda = currentAccess.view_agenda;
   const canManageInventory = currentAccess.manage_inventory;
   const canManageHospitals = currentAccess.manage_hospitals;
   const canManageUsers = profile.role === 'admin' || currentAccess.manage_users;
@@ -262,6 +266,12 @@ function App() {
             <button className={view === 'requests' ? 'active' : ''} type="button" onClick={() => setView('requests')}>
               <ListChecks size={18} />
               <span>Solicitações</span>
+            </button>
+          )}
+          {canViewAgenda && (
+            <button className={view === 'agenda' ? 'active' : ''} type="button" onClick={() => setView('agenda')}>
+              <CalendarDays size={18} />
+              <span>Agenda</span>
             </button>
           )}
           {canManageInventory && (
@@ -365,6 +375,7 @@ function App() {
         />
       )}
       {view === 'requests' && <RequestsOverview profile={profile} access={currentAccess} onRequestCreated={handleSaved} />}
+      {view === 'agenda' && <SurgeryAgenda profile={profile} />}
       {view === 'inventory' && <InventoryAdmin />}
       {view === 'hospitals' && <HospitalsAdmin />}
       {view === 'users' && <UsersAdmin />}

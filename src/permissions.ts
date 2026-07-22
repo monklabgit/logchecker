@@ -2,6 +2,7 @@ import type { UserRole } from './types';
 
 export type AccessKey =
   | 'view_dashboard'
+  | 'view_agenda'
   | 'create_requests'
   | 'manage_hospitals'
   | 'manage_users'
@@ -27,6 +28,10 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
   view_dashboard: {
     title: 'Visualizar fluxo',
     description: 'Acessar o fluxo de materiais e os detalhes das solicitações.',
+  },
+  view_agenda: {
+    title: 'Visualizar agenda',
+    description: 'Consultar o calendário de cirurgias e as designações de instrumentadores.',
   },
   create_requests: {
     title: 'Criar solicitações',
@@ -75,6 +80,7 @@ export const ACCESS_KEYS = Object.keys(ACCESS_LABELS) as AccessKey[];
 export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   pending: {
     view_dashboard: false,
+    view_agenda: false,
     create_requests: false,
     manage_hospitals: false,
     manage_users: false,
@@ -88,6 +94,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   admin: {
     view_dashboard: true,
+    view_agenda: true,
     create_requests: true,
     manage_hospitals: true,
     manage_users: true,
@@ -101,6 +108,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   office: {
     view_dashboard: true,
+    view_agenda: true,
     create_requests: true,
     manage_hospitals: false,
     manage_users: false,
@@ -114,6 +122,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   driver: {
     view_dashboard: true,
+    view_agenda: false,
     create_requests: false,
     manage_hospitals: false,
     manage_users: false,
@@ -127,6 +136,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   instrumentator: {
     view_dashboard: true,
+    view_agenda: true,
     create_requests: false,
     manage_hospitals: false,
     manage_users: false,

@@ -133,6 +133,8 @@ export type SurgeryRequest = {
   surgery_time: string | null;
   procedure: string;
   insurance: string;
+  assigned_instrumentator_id: string | null;
+  assigned_instrumentator: { id: string; full_name: string } | null;
   observation: string;
   origin: 'manual' | 'image' | 'document';
   status: RequestStatus;
@@ -143,6 +145,20 @@ export type SurgeryRequest = {
   transport_evidence_photos: EvidencePhoto[];
 };
 
+export type AgendaRequest = {
+  id: string;
+  code: number;
+  hospital: string;
+  surgeon: string;
+  patient: string;
+  surgery_date: string;
+  surgery_time: string | null;
+  procedure: string;
+  status: RequestStatus;
+  priority: number;
+  assigned_instrumentator_id: string | null;
+  assigned_instrumentator_name: string | null;
+};
 export type TransportEvent = {
   id: number;
   action: 'created' | 'claimed' | 'started' | 'completed' | 'cancelled';

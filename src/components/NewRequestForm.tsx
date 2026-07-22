@@ -1,7 +1,7 @@
 import { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, Check, FileUp, LoaderCircle, Minus, Plus, Save, ScanText, Search, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from '../supabase';
-import type { Hospital, InventoryCategory, InventoryItem } from '../types';
+import type { Hospital, InventoryCategory, InventoryItem, Profile } from '../types';
 import { HospitalModal } from './HospitalModal';
 
 type SectionName = 'CME' | 'OPME';
@@ -24,6 +24,7 @@ type RequestForm = {
   procedure: string;
   insurance: string;
   observation: string;
+  assignedInstrumentatorId: string;
 };
 
 type AiMaterialItem = {
@@ -61,6 +62,7 @@ const initialForm: RequestForm = {
   procedure: '',
   insurance: '',
   observation: '',
+  assignedInstrumentatorId: '',
 };
 
 const makeEmptyItem = (): MaterialItem => ({
@@ -200,6 +202,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
   const [form, setForm] = useState<RequestForm>(initialForm);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [instrumentators, setInstrumentators] = useState<Pick<Profile, 'id' | 'full_name'>[]>([]);
   const [hospitalModalOpen, setHospitalModalOpen] = useState(false);
   const [cmeItems, setCmeItems] = useState<MaterialItem[]>([makeEmptyItem()]);
   const [opmeItems, setOpmeItems] = useState<MaterialItem[]>([makeEmptyItem()]);
@@ -242,10 +245,17 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     return nextItems;
   };
 
+  const loadInstrumentators = async () => {
+    const { data } = await supabase.rpc('list_active_instrumentators');
+    const nextInstrumentators = (data || []) as Pick<Profile, 'id' | 'full_name'>[];
+    setInstrumentators(nextInstrumentators);
+    return nextInstrumentators;
+  };
+
   useEffect(() => {
     let active = true;
 
-    Promise.all([loadHospitals(), loadInventoryItems()]).then(([nextHospitals, nextInventoryItems]) => {
+    Promise.all([loadHospitals(), loadInventoryItems(), loadInstrumentators()]).then(([nextHospitals, nextInventoryItems]) => {
       if (!active) return;
       setHospitals(nextHospitals);
       setInventoryItems(nextInventoryItems);
@@ -615,6 +625,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
           surgery_time: form.surgeryTime,
           procedure: form.procedure,
           insurance: form.insurance,
+          assigned_instrumentator_id: form.assignedInstrumentatorId || null,
           observation: form.observation,
           priority,
           origin,
@@ -622,6 +633,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
         items_data: items,
       });
       if (createError) throw createError;
+
 
       onSaved(String(data));
     } catch (caughtError) {
@@ -824,6 +836,15 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
           <label>
             <span>Convênio</span>
             <input value={form.insurance} onChange={(event) => updateForm('insurance', event.target.value)} placeholder="Ex.: SUS, Unimed, particular" />
+          </label>
+          <label>
+            <span>Instrumentador</span>
+            <select value={form.assignedInstrumentatorId} onChange={(event) => updateForm('assignedInstrumentatorId', event.target.value)}>
+              <option value="">Designar depois</option>
+              {instrumentators.map((instrumentator) => (
+                <option value={instrumentator.id} key={instrumentator.id}>{instrumentator.full_name}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Prioridade</span>
