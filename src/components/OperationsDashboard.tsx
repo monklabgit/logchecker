@@ -57,13 +57,13 @@ const getOpenTask = (request: SurgeryRequest) =>
 
 const actionForTask = (task: TransportTask | null, profile: Profile, access: RoleAccess) => {
   if (!task) return null;
-  if (task.status === 'available' && ['driver', 'admin'].includes(profile.role) && access.claim_routes) {
+  if (task.status === 'available' && access.claim_routes) {
     return { action: 'claim', label: 'Assumir', icon: CircleDot };
   }
-  if (task.status === 'assigned' && (task.assigned_driver_id === profile.id || profile.role === 'admin') && access.claim_routes) {
+  if (task.status === 'assigned' && (task.assigned_driver_id === profile.id || access.manage_requests) && access.claim_routes) {
     return { action: 'start', label: 'Iniciar rota', icon: Play };
   }
-  if (task.status === 'in_route' && (task.assigned_driver_id === profile.id || profile.role === 'admin')) {
+  if (task.status === 'in_route' && (task.assigned_driver_id === profile.id || access.manage_requests)) {
     if (task.type === 'delivery' && !access.complete_delivery) return null;
     if (task.type === 'pickup' && !access.complete_pickup) return null;
     return {

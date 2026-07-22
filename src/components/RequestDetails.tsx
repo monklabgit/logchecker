@@ -43,7 +43,7 @@ const photoTypeLabels = {
   kit_control: 'Controle de Kits',
 };
 
-export function RequestDetails({ profile, access, request, onClose, onChanged }: RequestDetailsProps) {
+export function RequestDetails({ access, request, onClose, onChanged }: RequestDetailsProps) {
   const [events, setEvents] = useState<TransportEvent[]>([]);
   const [signedPhotos, setSignedPhotos] = useState<Array<EvidencePhoto & { signedUrl: string }>>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -91,6 +91,11 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
   }, [request.id]);
 
   useEffect(() => {
+    if (!access.view_evidence) {
+      setSignedPhotos([]);
+      return undefined;
+    }
+
     let active = true;
     const photos = (request.transport_evidence_photos || []).filter((photo) => photo.finalized_at && new Date(photo.expires_at) > new Date());
 
@@ -106,7 +111,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
     return () => {
       active = false;
     };
-  }, [request.transport_evidence_photos]);
+  }, [access.view_evidence, request.transport_evidence_photos]);
 
   const closeSafely = () => {
     if (
@@ -348,7 +353,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
             )}
           </section>
 
-          {signedPhotos.length > 0 && (
+          {access.view_evidence && signedPhotos.length > 0 && (
             <section className="details-evidence">
               <h3><ImageIcon size={18} /> Evidências fotográficas</h3>
               <div className="evidence-grid">
@@ -366,7 +371,7 @@ export function RequestDetails({ profile, access, request, onClose, onChanged }:
           {error && <p className="auth-message error">{error}</p>}
         </div>
 
-        {request.status === 'delivered' && ['admin', 'office', 'instrumentator'].includes(profile.role) && access.release_materials && (
+        {request.status === 'delivered' && access.release_materials && (
           <footer className="details-footer release-footer">
             {releaseEvidence.loading ? (
               <div className="evidence-loading"><LoaderCircle className="spin" size={20} /> Carregando fotos salvas...</div>

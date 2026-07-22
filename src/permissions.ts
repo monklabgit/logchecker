@@ -2,8 +2,10 @@ import type { UserRole } from './types';
 
 export type AccessKey =
   | 'view_dashboard'
+  | 'view_requests'
   | 'view_agenda'
   | 'create_requests'
+  | 'manage_requests'
   | 'manage_hospitals'
   | 'manage_users'
   | 'claim_routes'
@@ -29,6 +31,10 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
     title: 'Visualizar fluxo',
     description: 'Acessar o fluxo de materiais e os detalhes das solicitações.',
   },
+  view_requests: {
+    title: 'Visualizar solicitações',
+    description: 'Acessar a lista operacional e consultar os detalhes das solicitações.',
+  },
   view_agenda: {
     title: 'Visualizar agenda',
     description: 'Consultar o calendário de cirurgias e as designações de instrumentadores.',
@@ -36,6 +42,10 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
   create_requests: {
     title: 'Criar solicitações',
     description: 'Cadastrar novas cirurgias manualmente ou por leitura de imagem.',
+  },
+  manage_requests: {
+    title: 'Gerenciar solicitações',
+    description: 'Editar, cancelar, excluir e designar motoristas ou instrumentadores.',
   },
   manage_hospitals: {
     title: 'Gerenciar hospitais',
@@ -80,8 +90,10 @@ export const ACCESS_KEYS = Object.keys(ACCESS_LABELS) as AccessKey[];
 export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   pending: {
     view_dashboard: false,
+    view_requests: false,
     view_agenda: false,
     create_requests: false,
+    manage_requests: false,
     manage_hospitals: false,
     manage_users: false,
     claim_routes: false,
@@ -94,8 +106,10 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   admin: {
     view_dashboard: true,
+    view_requests: true,
     view_agenda: true,
     create_requests: true,
+    manage_requests: true,
     manage_hospitals: true,
     manage_users: true,
     claim_routes: true,
@@ -108,8 +122,10 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   office: {
     view_dashboard: true,
+    view_requests: true,
     view_agenda: true,
     create_requests: true,
+    manage_requests: true,
     manage_hospitals: false,
     manage_users: false,
     claim_routes: false,
@@ -122,8 +138,10 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   driver: {
     view_dashboard: true,
+    view_requests: false,
     view_agenda: false,
     create_requests: false,
+    manage_requests: false,
     manage_hospitals: false,
     manage_users: false,
     claim_routes: true,
@@ -136,8 +154,10 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
   },
   instrumentator: {
     view_dashboard: true,
+    view_requests: false,
     view_agenda: true,
     create_requests: false,
+    manage_requests: false,
     manage_hospitals: false,
     manage_users: false,
     claim_routes: false,

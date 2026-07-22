@@ -251,8 +251,26 @@ export default async function handler(req: any, res: any) {
     return sendJson(res, 400, { error: 'Invalid JSON body' });
   }
 
-  const profileId = userData.user.id;
+const profileId = userData.user.id;
   const action = body.action || 'status';
+  const eventAccess: Partial<Record<NotifyEventType, string>> = {
+    delivery_completed: 'complete_delivery',
+    release_completed: 'release_materials',
+    pickup_completed: 'complete_pickup',
+    kit_control: 'create_requests',
+  };
+  const requiredAccess = action === 'notify_operation' && body.eventType
+    ? eventAccess[body.eventType]
+    : 'manage_whatsapp';
+
+  if (requiredAccess) {
+    const { data: hasRequiredAccess, error: accessError } = await supabase.rpc('current_user_has_access', {
+      target_access_key: requiredAccess,
+    });
+    if (accessError || !hasRequiredAccess) {
+      return sendJson(res, 403, { error: 'Você não tem permissão para executar esta ação.' });
+    }
+  }
 
   const getProfileName = async () => {
     const { data } = await supabase.from('profiles').select('full_name').eq('id', profileId).maybeSingle();

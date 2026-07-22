@@ -1,5 +1,6 @@
 import { Camera, Check, Clipboard, FileText, LoaderCircle, Minus, Plus, RefreshCw, ScanText, Trash2, Upload, X } from 'lucide-react';
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../supabase';
 
 type FlowType = 'ENTRADA' | 'RETIRADA';
 type SectionName = 'CME' | 'OPME';
@@ -494,9 +495,16 @@ export function TextGeneratorTool() {
     setOcrText('');
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('Sessão ausente. Entre novamente.');
+
       const response = await fetch('/api/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ image: photo.dataUrl }),
       });
       setOcrProgress(70);

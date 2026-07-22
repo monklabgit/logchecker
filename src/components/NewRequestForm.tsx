@@ -558,9 +558,16 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
       }
 
       const dataUrl = analysisFile === file && previewDataUrl ? previewDataUrl : await readFileAsDataUrl(analysisFile);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('Sessão ausente. Entre novamente.');
+
       const response = await fetch('/api/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           file: dataUrl,
           filename: analysisFile.name,

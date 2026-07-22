@@ -1,3 +1,7 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseProjectUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 type MaterialItem = {
   quantity: string;
   description: string;
@@ -140,6 +144,27 @@ const bodyFromRequest = (req: any): ExtractionRequest => {
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token || !supabaseProjectUrl || !supabasePublishableKey) {
+    return sendJson(res, 401, { error: 'Sessão ausente. Entre novamente.' });
+  }
+
+  const supabase = createClient(supabaseProjectUrl, supabasePublishableKey, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData.user) {
+    return sendJson(res, 401, { error: 'Sessão inválida.' });
+  }
+  const { data: canCreateRequests, error: accessError } = await supabase.rpc('current_user_has_access', {
+    target_access_key: 'create_requests',
+  });
+  if (accessError || !canCreateRequests) {
+    return sendJson(res, 403, { error: 'Você não tem permissão para criar solicitações.' });
   }
 
   const apiKey = process.env.OPENAI_API_KEY_IMG_READ?.trim();

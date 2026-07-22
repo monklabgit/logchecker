@@ -549,6 +549,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                     <small>Prioridade {priorityLabels[request.priority] || 'Normal'}</small>
                   </div>
                   <div className="overview-actions" aria-label="Ações da solicitação">
+                    {access.manage_requests && (
                     <button
                       type="button"
                       onClick={() => openAssignDriver(request)}
@@ -558,9 +559,12 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                     >
                       <UserRoundCheck size={16} />
                     </button>
+                    )}
                     <button type="button" onClick={() => setSelectedRequest(request)} title="Ver detalhes" aria-label="Ver detalhes">
                       <Eye size={16} />
                     </button>
+                    {access.manage_requests && (
+                      <>
                     <button type="button" onClick={() => startEdit(request)} title="Editar solicitação" aria-label="Editar solicitação">
                       <Edit3 size={16} />
                     </button>
@@ -574,6 +578,8 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                     >
                       {cancellingId === request.id || deletingId === request.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
                     </button>
+                      </>
+                    )}
                   </div>
                 </article>
               );

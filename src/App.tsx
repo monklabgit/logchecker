@@ -147,6 +147,23 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId) return undefined;
+
+    const channel = supabase
+      .channel(`current-profile-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+        (payload) => setProfile(payload.new as Profile)
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [session?.user.id]);
+  useEffect(() => {
     const showUpdate = () => setUpdateAvailable(true);
     window.addEventListener('logchecker-update-ready', showUpdate);
     return () => window.removeEventListener('logchecker-update-ready', showUpdate);
@@ -163,7 +180,7 @@ function App() {
 
     const access = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
     const canFlow = access.view_dashboard;
-    const canRequests = ['admin', 'office'].includes(profile.role);
+    const canRequests = access.view_requests;
     const canAgenda = access.view_agenda;
     const canInventory = access.manage_inventory;
     const canHospitals = access.manage_hospitals;
@@ -199,7 +216,8 @@ function App() {
     setHighlightedRequestId(requestId);
     setSaveNotice('Solicitação salva com sucesso e disponível para entrega.');
     setDashboardRefreshKey((current) => current + 1);
-    setView(['admin', 'office'].includes(profile?.role || '') ? 'requests' : 'flow');
+    const access = profile ? (profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role]) : null;
+    setView(access?.view_requests ? 'requests' : 'flow');
   };
 
   if (authLoading) {
@@ -243,7 +261,7 @@ function App() {
 
   const currentAccess = profile.role === 'admin' ? DEFAULT_ROLE_ACCESS.admin : roleAccess[profile.role];
   const canViewFlow = currentAccess.view_dashboard;
-  const canViewRequests = ['admin', 'office'].includes(profile.role);
+  const canViewRequests = currentAccess.view_requests;
   const canViewAgenda = currentAccess.view_agenda;
   const canManageInventory = currentAccess.manage_inventory;
   const canManageHospitals = currentAccess.manage_hospitals;
@@ -375,7 +393,7 @@ function App() {
         />
       )}
       {view === 'requests' && <RequestsOverview profile={profile} access={currentAccess} onRequestCreated={handleSaved} />}
-      {view === 'agenda' && <SurgeryAgenda profile={profile} />}
+      {view === 'agenda' && <SurgeryAgenda profile={profile} access={currentAccess} />}
       {view === 'inventory' && <InventoryAdmin />}
       {view === 'hospitals' && <HospitalsAdmin />}
       {view === 'users' && <UsersAdmin />}

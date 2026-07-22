@@ -9,11 +9,13 @@ import {
   Stethoscope,
   UserRound,
 } from 'lucide-react';
+import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { AgendaRequest, Profile } from '../types';
 
 type SurgeryAgendaProps = {
   profile: Profile;
+  access: RoleAccess;
 };
 
 const weekdayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -63,10 +65,10 @@ const bySchedule = (a: AgendaRequest, b: AgendaRequest) =>
 
 const requestLabel = (request: AgendaRequest) => `#${String(request.code).padStart(4, '0')}`;
 
-export function SurgeryAgenda({ profile }: SurgeryAgendaProps) {
+export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
   const today = useMemo(() => new Date(), []);
   const todayKey = dateKey(today);
-  const canAssign = profile.role === 'admin' || profile.role === 'office';
+  const canAssign = access.manage_requests;
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [requests, setRequests] = useState<AgendaRequest[]>([]);
