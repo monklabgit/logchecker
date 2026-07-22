@@ -12,6 +12,12 @@ type WhatsappResponse = {
   connection?: UserWhatsappConnection | null;
   state?: string;
   qrcode?: string;
+  groups?: {
+    logistics_group_jid: string;
+    logistics_group_name: string;
+    kit_control_group_jid: string;
+    kit_control_group_name: string;
+  };
   error?: string;
 };
 
@@ -58,12 +64,20 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
     setKitControlGroupName(nextConnection.kit_control_group_name || '');
   };
 
+  const applyGroups = (groups?: WhatsappResponse['groups']) => {
+    if (!groups) return;
+    setLogisticsGroupJid(groups.logistics_group_jid || '');
+    setLogisticsGroupName(groups.logistics_group_name || '');
+    setKitControlGroupJid(groups.kit_control_group_jid || '');
+    setKitControlGroupName(groups.kit_control_group_name || '');
+  };
   const loadStatus = async (quiet = false) => {
     if (!quiet) setLoading(true);
     setError('');
     try {
       const data = await callWhatsapp({ action: 'status' });
       applyConnection(data.connection);
+      applyGroups(data.groups);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível carregar o WhatsApp.');
     } finally {
@@ -82,6 +96,7 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
     try {
       const data = await callWhatsapp({ action: 'connect' });
       applyConnection(data.connection);
+      applyGroups(data.groups);
       setQrcode(data.qrcode || '');
       setNotice('QR Code gerado. Escaneie com o WhatsApp e depois atualize o status.');
     } catch (caughtError) {
@@ -98,6 +113,7 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
     try {
       const data = await callWhatsapp({ action: 'logout' });
       applyConnection(data.connection);
+      applyGroups(data.groups);
       setQrcode('');
       setNotice('WhatsApp desconectado.');
     } catch (caughtError) {
@@ -120,6 +136,7 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
         kitControlGroupName,
       });
       applyConnection(data.connection);
+      applyGroups(data.groups);
       setNotice('Grupos do WhatsApp atualizados.');
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível salvar os grupos.');
@@ -129,6 +146,7 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
   };
 
   const state = connection?.connection_state || 'not_configured';
+  const canEditGroups = profile.role === 'admin';
 
   return (
     <section className="settings-view" aria-labelledby="settings-title">
@@ -192,7 +210,7 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
                     <UsersRound size={18} />
                     <div>
                       <strong>Grupos de disparo</strong>
-                      <span>Defina um destino para a logística e outro para a Conferência de Kits.</span>
+                      <span>Destinos globais usados por todos os usuários do LogChecker.</span>
                     </div>
                   </div>
                   <div className="whatsapp-groups-grid">
@@ -200,29 +218,33 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
                       <h4>Logística</h4>
                       <label>
                         <span>Nome do grupo</span>
-                        <input value={logisticsGroupName} onChange={(event) => setLogisticsGroupName(event.target.value)} placeholder="Ex.: Marja Logística Rio" />
+                        <input value={logisticsGroupName} onChange={(event) => setLogisticsGroupName(event.target.value)} placeholder="Ex.: Marja Logística Rio" disabled={!canEditGroups || Boolean(acting)} />
                       </label>
                       <label>
                         <span>ID do grupo</span>
-                        <input value={logisticsGroupJid} onChange={(event) => setLogisticsGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" />
+                        <input value={logisticsGroupJid} onChange={(event) => setLogisticsGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" disabled={!canEditGroups || Boolean(acting)} />
                       </label>
                     </div>
                     <div className="whatsapp-group-fields">
                       <h4>Conferência de Kits</h4>
                       <label>
                         <span>Nome do grupo</span>
-                        <input value={kitControlGroupName} onChange={(event) => setKitControlGroupName(event.target.value)} placeholder="Ex.: Conferência de Kits" />
+                        <input value={kitControlGroupName} onChange={(event) => setKitControlGroupName(event.target.value)} placeholder="Ex.: Conferência de Kits" disabled={!canEditGroups || Boolean(acting)} />
                       </label>
                       <label>
                         <span>ID do grupo</span>
-                        <input value={kitControlGroupJid} onChange={(event) => setKitControlGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" />
+                        <input value={kitControlGroupJid} onChange={(event) => setKitControlGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" disabled={!canEditGroups || Boolean(acting)} />
                       </label>
                     </div>
                   </div>
-                  <button className="save-whatsapp-groups-button" type="button" onClick={() => void saveGroups()} disabled={Boolean(acting)}>
-                    {acting === 'save-groups' ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
-                    Salvar grupos
-                  </button>
+                  {canEditGroups ? (
+                    <button className="save-whatsapp-groups-button" type="button" onClick={() => void saveGroups()} disabled={Boolean(acting)}>
+                      {acting === 'save-groups' ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+                      Salvar grupos para todos
+                    </button>
+                  ) : (
+                    <p className="whatsapp-groups-readonly">Somente administradores podem alterar estes grupos.</p>
+                  )}
                 </div>
               </>
             )}

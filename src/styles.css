@@ -3992,6 +3992,19 @@ select:focus {
   width: 100%;
 }
 
+.whatsapp-group-fields input:disabled {
+  opacity: 1;
+  background: var(--surface-alt);
+  color: var(--navy);
+  cursor: not-allowed;
+}
+
+.whatsapp-groups-readonly {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
 .save-whatsapp-groups-button {
   display: inline-flex;
   min-height: 42px;

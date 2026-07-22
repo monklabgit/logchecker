@@ -161,12 +161,13 @@ function CmeLabelsSheet({ request, labels, page }: { request: SurgeryRequest; la
       {labels.map((label) => (
         <section className="cme-box-label" key={label.key}>
           <header>
-            <span>CAIXA CME</span>
+            <span>{request.hospital || 'HOSPITAL NÃO INFORMADO'}</span>
             <small>{label.boxCount === 1 ? '1 caixa' : `${label.boxCount} caixas`}</small>
           </header>
           <h2>
-            <span className="cme-label-material-name">{label.description}</span>
-            {label.note && <span className="cme-label-material-note">{label.note}</span>}
+            <span className="cme-label-material-name">
+              {label.description}{label.note ? ' - ' + label.note : ''}
+            </span>
           </h2>
           <dl>
             <div>

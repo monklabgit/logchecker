@@ -82,8 +82,12 @@
 }
 
 .cme-box-label > header span {
-  font-size: 16px;
+  min-width: 0;
+  font-size: 15px;
   font-weight: 900;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
 }
 
 .cme-box-label > header small {
@@ -92,13 +96,12 @@
 }
 
 .cme-box-label h2 {
-  display: grid;
+  display: flex;
   min-height: 18mm;
-  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 3mm;
   margin: 0;
   padding: 2mm 3mm;
-  place-items: center start;
   border-bottom: 0.25mm solid #8290a0;
   color: #07192f;
   font-size: 21px;
@@ -126,7 +129,7 @@
 .cme-box-label dl {
   display: grid;
   min-height: 0;
-  grid-template-columns: 1.25fr 0.75fr;
+  grid-template-columns: 0.8fr 1.2fr;
   margin: 0;
 }
 

@@ -253,7 +253,7 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
               <span><Clock3 size={18} /></span>
               <div>
                 <p>Próximo compromisso</p>
-                <h2>Próxima cirurgia</h2>
+                <h2>Próximas cirurgias</h2>
               </div>
             </header>
             <div className="agenda-summary-content">

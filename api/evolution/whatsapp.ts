@@ -41,6 +41,12 @@ type WhatsappConnection = {
   kit_control_group_name: string;
 };
 
+type GlobalWhatsappGroups = {
+  logistics_group_jid: string;
+  logistics_group_name: string;
+  kit_control_group_jid: string;
+  kit_control_group_name: string;
+};
 const sendJson = (res: any, status: number, payload: unknown) =>
   res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
 
@@ -298,6 +304,28 @@ const profileId = userData.user.id;
     return data as WhatsappConnection | null;
   };
 
+  const getGlobalGroups = async (): Promise<GlobalWhatsappGroups> => {
+    const { data, error } = await supabase
+      .from('whatsapp_group_settings')
+      .select('logistics_group_jid, logistics_group_name, kit_control_group_jid, kit_control_group_name')
+      .eq('singleton', true)
+      .single();
+    if (error) throw error;
+    return {
+      logistics_group_jid: data.logistics_group_jid || defaultGroupJid,
+      logistics_group_name: data.logistics_group_name || defaultGroupName,
+      kit_control_group_jid: data.kit_control_group_jid || configuredKitControlGroupJid,
+      kit_control_group_name: data.kit_control_group_name || configuredKitControlGroupName,
+    };
+  };
+
+  const connectionWithGlobalGroups = (connection: WhatsappConnection, groups: GlobalWhatsappGroups): WhatsappConnection => ({
+    ...connection,
+    group_jid: groups.logistics_group_jid,
+    group_name: groups.logistics_group_name,
+    kit_control_group_jid: groups.kit_control_group_jid,
+    kit_control_group_name: groups.kit_control_group_name,
+  });
   const ensureDefaultGroups = async (connection: WhatsappConnection | null) => {
     if (!connection) return connection;
     const updates: Record<string, string> = {};
@@ -358,14 +386,17 @@ const profileId = userData.user.id;
 
   try {
     if (action === 'status') {
-      const connection = await getConnection();
+      const [connection, groups] = await Promise.all([getConnection(), getGlobalGroups()]);
       if (!connection) {
-        return sendJson(res, 200, { connection: null, state: 'not_configured' });
+        return sendJson(res, 200, { connection: null, groups, state: 'not_configured' });
       }
 
       const updated = await refreshConnectionState(connection);
-
-      return sendJson(res, 200, { connection: updated, state: updated.connection_state });
+      return sendJson(res, 200, {
+        connection: connectionWithGlobalGroups(updated, groups),
+        groups,
+        state: updated.connection_state,
+      });
     }
 
     if (action === 'save_groups') {
@@ -385,23 +416,32 @@ const profileId = userData.user.id;
         return sendJson(res, 400, { error: 'Informe o nome dos dois grupos.' });
       }
 
-      const { data: canManageGroups } = await supabase.rpc('current_user_has_access', {
-        target_access_key: 'manage_whatsapp',
-      });
-      if (!canManageGroups) {
-        return sendJson(res, 403, { error: 'Você não tem permissão para configurar os grupos.' });
+      const { data: isAdmin } = await supabase.rpc('is_admin');
+      if (!isAdmin) {
+        return sendJson(res, 403, { error: 'Somente administradores podem alterar os grupos.' });
       }
 
-      await ensureConnection();
-      const updated = await updateConnection({
-        group_jid: logisticsGroupJid,
-        group_name: logisticsGroupName,
-        kit_control_group_jid: kitControlGroupJid,
-        kit_control_group_name: kitControlGroupName,
-      });
-      return sendJson(res, 200, { connection: updated });
-    }
+      const { data: groups, error: groupError } = await supabase
+        .from('whatsapp_group_settings')
+        .update({
+          logistics_group_jid: logisticsGroupJid,
+          logistics_group_name: logisticsGroupName,
+          kit_control_group_jid: kitControlGroupJid,
+          kit_control_group_name: kitControlGroupName,
+          updated_by: profileId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('singleton', true)
+        .select('logistics_group_jid, logistics_group_name, kit_control_group_jid, kit_control_group_name')
+        .single();
+      if (groupError) throw groupError;
 
+      const connection = await getConnection();
+      return sendJson(res, 200, {
+        connection: connection ? connectionWithGlobalGroups(connection, groups) : null,
+        groups,
+      });
+    }
     if (action === 'connect') {
       const connection = await ensureConnection();
       const instanceName = connection.instance_name;
@@ -427,17 +467,29 @@ const profileId = userData.user.id;
         last_qr_at: new Date().toISOString(),
       });
 
-      return sendJson(res, 200, { connection: updated, qrcode: base64, payload: qrPayload });
+      const groups = await getGlobalGroups();
+      return sendJson(res, 200, {
+        connection: connectionWithGlobalGroups(updated, groups),
+        groups,
+        qrcode: base64,
+        payload: qrPayload,
+      });
     }
 
     if (action === 'logout') {
       const connection = await getConnection();
       if (!connection) {
-        return sendJson(res, 200, { connection: null, state: 'not_configured' });
+        const groups = await getGlobalGroups();
+        return sendJson(res, 200, { connection: null, groups, state: 'not_configured' });
       }
       await evolutionFetch(`/instance/logout/${encodeURIComponent(connection.instance_name)}`, { method: 'DELETE' });
       const updated = await updateConnection({ connection_state: 'close', connected_at: null });
-      return sendJson(res, 200, { connection: updated, state: 'close' });
+      const groups = await getGlobalGroups();
+      return sendJson(res, 200, {
+        connection: connectionWithGlobalGroups(updated, groups),
+        groups,
+        state: 'close',
+      });
     }
 
     if (action === 'notify_operation') {
@@ -529,9 +581,10 @@ const profileId = userData.user.id;
         }>;
       };
       const codeLabel = requestCodeLabel(typedRequest.code);
+      const globalGroups = await getGlobalGroups();
       const targetGroupJid = body.eventType === 'kit_control'
-        ? activeConnection.kit_control_group_jid
-        : activeConnection.group_jid;
+        ? globalGroups.kit_control_group_jid
+        : globalGroups.logistics_group_jid;
       if (!targetGroupJid) {
         throw new Error(body.eventType === 'kit_control'
           ? 'O grupo de Conferência de Kits não está configurado.'
