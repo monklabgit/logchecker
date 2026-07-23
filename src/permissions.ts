@@ -13,6 +13,7 @@ export type AccessKey =
   | 'release_materials'
   | 'complete_pickup'
   | 'view_evidence'
+  | 'delete_evidence'
   | 'manage_whatsapp'
   | 'manage_inventory';
 
@@ -75,6 +76,10 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
     title: 'Ver evidências',
     description: 'Visualizar fotos anexadas nas etapas do fluxo.',
   },
+  delete_evidence: {
+    title: 'Excluir evidências',
+    description: 'Excluir fotos definitivamente e registrar a ação no histórico.',
+  },
   manage_whatsapp: {
     title: 'Conectar WhatsApp',
     description: 'Conectar a própria instância de WhatsApp para disparos.',
@@ -101,6 +106,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     release_materials: false,
     complete_pickup: false,
     view_evidence: false,
+    delete_evidence: false,
     manage_whatsapp: false,
     manage_inventory: false,
   },
@@ -117,6 +123,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     release_materials: true,
     complete_pickup: true,
     view_evidence: true,
+    delete_evidence: true,
     manage_whatsapp: true,
     manage_inventory: true,
   },
@@ -133,6 +140,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     release_materials: true,
     complete_pickup: false,
     view_evidence: true,
+    delete_evidence: true,
     manage_whatsapp: true,
     manage_inventory: true,
   },
@@ -149,6 +157,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     release_materials: false,
     complete_pickup: true,
     view_evidence: true,
+    delete_evidence: false,
     manage_whatsapp: true,
     manage_inventory: false,
   },
@@ -165,6 +174,7 @@ export const DEFAULT_ROLE_ACCESS: Record<UserRole, RoleAccess> = {
     release_materials: true,
     complete_pickup: false,
     view_evidence: true,
+    delete_evidence: false,
     manage_whatsapp: true,
     manage_inventory: false,
   },

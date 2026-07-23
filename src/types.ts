@@ -161,7 +161,7 @@ export type AgendaRequest = {
 };
 export type TransportEvent = {
   id: number;
-  action: 'created' | 'claimed' | 'started' | 'completed' | 'cancelled';
+  action: 'created' | 'claimed' | 'started' | 'completed' | 'cancelled' | 'evidence_deleted';
   from_status: TransportStatus | null;
   to_status: TransportStatus;
   note: string;

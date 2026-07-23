@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Printer, Save, Send, UserRound, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { CalendarDays, ChevronDown, ClipboardCheck, Eye, History, Image as ImageIcon, LoaderCircle, PackageOpen, Printer, Save, Send, Trash2, UserRound, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { EvidencePhoto, Profile, SurgeryRequest, TransportEvent } from '../types';
@@ -32,6 +32,7 @@ const actionLabels = {
   started: 'Rota iniciada',
   completed: 'Movimentação concluída',
   cancelled: 'Solicitação cancelada',
+  evidence_deleted: 'Evidência excluída',
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -46,6 +47,9 @@ const photoTypeLabels = {
 export function RequestDetails({ access, request, onClose, onChanged }: RequestDetailsProps) {
   const [events, setEvents] = useState<TransportEvent[]>([]);
   const [signedPhotos, setSignedPhotos] = useState<Array<EvidencePhoto & { signedUrl: string }>>([]);
+  const [evidenceDeleteTarget, setEvidenceDeleteTarget] = useState<(EvidencePhoto & { signedUrl: string }) | null>(null);
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState('');
+  const [evidenceNotice, setEvidenceNotice] = useState('');
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [releasing, setReleasing] = useState(false);
   const [hospitalDetailsOpen, setHospitalDetailsOpen] = useState(false);
@@ -70,25 +74,22 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
     .filter((task) => task.type === 'delivery' && task.status === 'completed')
     .sort((a, b) => (b.completed_at || b.created_at).localeCompare(a.completed_at || a.created_at))[0];
 
-  useEffect(() => {
-    let active = true;
-
-    supabase
+  const loadEvents = useCallback(async () => {
+    setLoadingEvents(true);
+    const { data, error: queryError } = await supabase
       .from('transport_events')
       .select('*, actor:profiles!transport_events_actor_id_fkey(id, full_name)')
       .eq('request_id', request.id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error: queryError }) => {
-        if (!active) return;
-        if (queryError) setError(queryError.message);
-        else setEvents((data || []) as TransportEvent[]);
-        setLoadingEvents(false);
-      });
+      .order('created_at', { ascending: false });
 
-    return () => {
-      active = false;
-    };
+    if (queryError) setError(queryError.message);
+    else setEvents((data || []) as TransportEvent[]);
+    setLoadingEvents(false);
   }, [request.id]);
+
+  useEffect(() => {
+    void loadEvents();
+  }, [loadEvents]);
 
   useEffect(() => {
     if (!access.view_evidence) {
@@ -112,6 +113,41 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
       active = false;
     };
   }, [access.view_evidence, request.transport_evidence_photos]);
+
+  const deleteEvidencePhoto = async () => {
+    if (!evidenceDeleteTarget) return;
+    setDeletingEvidenceId(evidenceDeleteTarget.id);
+    setError('');
+    setEvidenceNotice('');
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('Sessão ausente. Entre novamente para excluir a evidência.');
+
+      const response = await fetch('/api/delete-evidence-photo', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ photoId: evidenceDeleteTarget.id }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error || 'Não foi possível excluir a evidência.');
+
+      setSignedPhotos((current) => current.filter((photo) => photo.id !== evidenceDeleteTarget.id));
+      setEvidenceDeleteTarget(null);
+      setEvidenceNotice('Foto excluída definitivamente. A ação foi registrada no histórico.');
+      await loadEvents();
+      onChanged();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível excluir a evidência.');
+    } finally {
+      setDeletingEvidenceId('');
+    }
+  };
 
   const closeSafely = () => {
     if (
@@ -339,8 +375,9 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
                           <span>{event.actor?.full_name || (event.actor_id ? 'Usuário sem nome' : 'Usuário não registrado')}</span>
                         </strong>
                         <p>
-                          {event.from_status ? `${statusLabels[event.from_status]} -> ` : ''}
-                          {statusLabels[event.to_status]}
+                          {event.action === 'evidence_deleted'
+                            ? event.note
+                            : `${event.from_status ? `${statusLabels[event.from_status]} -> ` : ''}${statusLabels[event.to_status]}`}
                         </p>
                         <span className="history-actor">
                           {event.actor?.full_name || (event.actor_id ? 'Usuário sem nome' : 'Usuário não registrado')}
@@ -358,16 +395,31 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
               <h3><ImageIcon size={18} /> Evidências fotográficas</h3>
               <div className="evidence-grid">
                 {signedPhotos.map((photo) => (
-                  <a href={photo.signedUrl} target="_blank" rel="noreferrer" key={photo.id}>
-                    <img src={photo.signedUrl} alt={`Foto de ${photoTypeLabels[photo.photo_type]}`} />
-                    <span>{photoTypeLabels[photo.photo_type]}</span>
-                    <time dateTime={photo.created_at}>{dateTimeFormatter.format(new Date(photo.created_at))}</time>
-                  </a>
+                  <article className="evidence-grid-item" key={photo.id}>
+                    <a href={photo.signedUrl} target="_blank" rel="noreferrer">
+                      <img src={photo.signedUrl} alt={`Foto de ${photoTypeLabels[photo.photo_type]}`} />
+                      <span>{photoTypeLabels[photo.photo_type]}</span>
+                      <time dateTime={photo.created_at}>{dateTimeFormatter.format(new Date(photo.created_at))}</time>
+                    </a>
+                    {access.delete_evidence && (
+                      <button
+                        className="evidence-delete-button"
+                        type="button"
+                        onClick={() => setEvidenceDeleteTarget(photo)}
+                        disabled={deletingEvidenceId === photo.id}
+                        aria-label={`Excluir foto de ${photoTypeLabels[photo.photo_type]}`}
+                        title="Excluir evidência"
+                      >
+                        {deletingEvidenceId === photo.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                      </button>
+                    )}
+                  </article>
                 ))}
               </div>
             </section>
           )}
 
+          {evidenceNotice && <p className="auth-message success">{evidenceNotice}</p>}
           {error && <p className="auth-message error">{error}</p>}
         </div>
 
@@ -405,6 +457,48 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
               </button>
             </div>
           </footer>
+        )}
+
+        {evidenceDeleteTarget && (
+          <div
+            className="modal-backdrop nested"
+            role="presentation"
+            onMouseDown={(event) => event.target === event.currentTarget && !deletingEvidenceId && setEvidenceDeleteTarget(null)}
+          >
+            <section className="action-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-evidence-title">
+              <header>
+                <div>
+                  <p className="eyebrow">Excluir evidência</p>
+                  <h2 id="delete-evidence-title">Foto de {photoTypeLabels[evidenceDeleteTarget.photo_type]}</h2>
+                  <span>Esta ação será registrada no histórico da solicitação.</span>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  onClick={() => setEvidenceDeleteTarget(null)}
+                  disabled={Boolean(deletingEvidenceId)}
+                  aria-label="Fechar confirmação"
+                >
+                  <X size={20} />
+                </button>
+              </header>
+
+              <div className="danger-modal-copy">
+                <strong>A foto será excluída definitivamente do sistema.</strong>
+                <p>O arquivo será removido do Storage e não poderá ser recuperado. O histórico manterá quem realizou a exclusão e quando ela aconteceu.</p>
+              </div>
+
+              <footer>
+                <button className="card-detail-button" type="button" onClick={() => setEvidenceDeleteTarget(null)} disabled={Boolean(deletingEvidenceId)}>
+                  Cancelar
+                </button>
+                <button className="danger-action-button" type="button" onClick={() => void deleteEvidencePhoto()} disabled={Boolean(deletingEvidenceId)}>
+                  {deletingEvidenceId ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                  Excluir definitivamente
+                </button>
+              </footer>
+            </section>
+          </div>
         )}
 
         {printOpen && <SurgeryRequestPrintModal request={request} onClose={() => setPrintOpen(false)} />}

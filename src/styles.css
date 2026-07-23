@@ -3487,6 +3487,36 @@ select:focus {
   gap: 10px;
 }
 
+.evidence-grid-item {
+  position: relative;
+  min-width: 0;
+}
+
+.evidence-grid-item > a {
+  height: 100%;
+}
+
+.evidence-delete-button {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #f0cac6;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--danger);
+  box-shadow: 0 4px 12px rgba(7, 25, 47, 0.22);
+}
+
+.evidence-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .evidence-grid a {
   display: grid;
   overflow: hidden;
