@@ -1,5 +1,5 @@
-import { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from 'react';
-import { AlertCircle, Camera, Check, FileUp, LoaderCircle, Minus, Plus, Save, ScanText, Search, Trash2, Upload, X } from 'lucide-react';
+import { KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from 'react';
+import { LoaderCircle, Minus, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { supabase } from '../supabase';
 import type { Hospital, InventoryCategory, InventoryItem, Profile } from '../types';
 import { HospitalModal } from './HospitalModal';
@@ -26,25 +26,6 @@ type RequestForm = {
   insurance: string;
   observation: string;
   assignedInstrumentatorIds: string[];
-};
-
-type AiMaterialItem = {
-  quantity?: string;
-  description?: string;
-  note?: string;
-};
-
-type ExtractionResult = {
-  hospital?: string;
-  surgeon?: string;
-  patient?: string;
-  surgeryDate?: string;
-  surgeryTime?: string;
-  procedure?: string;
-  insurance?: string;
-  observation?: string;
-  cmeItems?: AiMaterialItem[];
-  opmeItems?: AiMaterialItem[];
 };
 
 type NewRequestFormProps = {
@@ -74,77 +55,6 @@ const makeEmptyItem = (): MaterialItem => ({
   note: '',
 });
 
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Arquivo vazio')));
-    reader.onerror = () => reject(new Error('Não foi possível abrir o arquivo'));
-    reader.readAsDataURL(file);
-  });
-
-const dataUrlToImage = (dataUrl: string) =>
-  new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Não foi possível preparar a imagem para leitura.'));
-    image.src = dataUrl;
-  });
-
-const canvasToBlob = (canvas: HTMLCanvasElement, quality: number) =>
-  new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Não foi possível compactar a imagem.'))), 'image/jpeg', quality);
-  });
-
-const prepareImageForAnalysis = async (file: File) => {
-  if (!file.type.startsWith('image/')) return file;
-  if (file.size <= 4 * 1024 * 1024) return file;
-
-  const dataUrl = await readFileAsDataUrl(file);
-  const image = await dataUrlToImage(dataUrl);
-  const maxEdge = 1800;
-  const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Não foi possível processar a imagem.');
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-  for (const quality of [0.82, 0.72, 0.62]) {
-    const blob = await canvasToBlob(canvas, quality);
-    if (blob.size <= 4 * 1024 * 1024 || quality === 0.62) {
-      const filename = file.name.replace(/\.[^.]+$/, '') || 'documento';
-      return new File([blob], `${filename}.jpg`, { type: 'image/jpeg' });
-    }
-  }
-
-  return file;
-};
-
-const normalizeExtractedDate = (value = '') => {
-  const brazilianDate = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  return brazilianDate ? `${brazilianDate[3]}-${brazilianDate[2]}-${brazilianDate[1]}` : value;
-};
-
-const normalizeExtractedTime = (value = '') => {
-  const normalized = value.trim().toUpperCase().replace('H', ':');
-  if (/^\d{1,2}$/.test(normalized)) return `${normalized.padStart(2, '0')}:00`;
-  if (/^\d{1,2}:$/.test(normalized)) return `${normalized.padStart(3, '0')}00`;
-  return normalized.slice(0, 5);
-};
-
-const friendlyReadError = (message: string) => {
-  if (/incorrect api key|api key|OPENAI_API_KEY|not configured|401/i.test(message)) {
-    return 'A IA não conseguiu analisar o arquivo porque a chave da OpenAI está inválida ou não configurada no ambiente atual.';
-  }
-
-  if (/failed to fetch|falha na leitura|unexpected token|404|html/i.test(message)) {
-    return 'Não consegui chamar a função da IA agora. Verifique se o ambiente está publicado corretamente e tente anexar novamente.';
-  }
-
-  return message || 'Não foi possível analisar o arquivo com IA.';
-};
-
 const normalizeName = (value = '') =>
   value
     .trim()
@@ -154,20 +64,6 @@ const normalizeName = (value = '') =>
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-
-const findHospitalMatch = (hospitals: Hospital[], extractedName = '') => {
-  const normalizedExtracted = normalizeName(extractedName);
-  if (!normalizedExtracted) return null;
-
-  return (
-    hospitals.find((hospital) => normalizeName(hospital.name) === normalizedExtracted) ||
-    hospitals.find((hospital) => {
-      const normalizedHospital = normalizeName(hospital.name);
-      return normalizedHospital.includes(normalizedExtracted) || normalizedExtracted.includes(normalizedHospital);
-    }) ||
-    null
-  );
-};
 
 const categoryForSection = (section: SectionName): InventoryCategory => (section === 'CME' ? 'instrumental' : 'opme');
 
@@ -210,17 +106,8 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
   const [materialSearch, setMaterialSearch] = useState<Record<SectionName, string>>({ CME: '', OPME: '' });
   const [inventoryNotice, setInventoryNotice] = useState('');
   const [priority, setPriority] = useState('2');
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [attachmentPreview, setAttachmentPreview] = useState('');
-  const [reading, setReading] = useState(false);
-  const [readSuccess, setReadSuccess] = useState(false);
-  const [readError, setReadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [quickHospitalOpen, setQuickHospitalOpen] = useState(false);
-  const [quickHospitalName, setQuickHospitalName] = useState('');
-  const [quickHospitalSaving, setQuickHospitalSaving] = useState(false);
-  const [quickHospitalError, setQuickHospitalError] = useState('');
   const quantityInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const loadHospitals = async () => {
@@ -291,14 +178,6 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     setHospitalModalOpen(false);
   };
 
-  const selectHospital = (hospital: Hospital) => {
-    setForm((current) => ({
-      ...current,
-      hospitalId: hospital.id,
-      hospital: hospital.name,
-    }));
-  };
-
   const getItems = (section: SectionName) => (section === 'CME' ? cmeItems : opmeItems);
   const setItems = (section: SectionName, items: MaterialItem[]) => {
     if (section === 'CME') setCmeItems(items);
@@ -354,20 +233,6 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     event.preventDefault();
     event.stopPropagation();
     addManualItem(section, itemId);
-  };
-
-  const itemsFromExtraction = (section: SectionName, items?: AiMaterialItem[]) => {
-    if (!items?.length) return [makeEmptyItem()];
-    return items.map((item) => {
-      const match = findInventoryMatch(inventoryItems, section, item.description || '', item.note || '');
-      return {
-        id: crypto.randomUUID(),
-        inventoryItemId: match?.id || '',
-        quantity: item.quantity || match?.quantity || '',
-        description: match?.description || item.description || '',
-        note: match?.kit || item.note || '',
-      };
-    });
   };
 
   const addInventoryItemToRequest = (section: SectionName, inventoryItem: InventoryItem) => {
@@ -442,163 +307,6 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     setInventoryNotice(`Material adicionado ao estoque: ${savedItem.description}${savedItem.kit ? ` | ${savedItem.kit}` : ''}.`);
   };
 
-  const applyExtraction = (result: ExtractionResult) => {
-    const extractedHospital = result.hospital || '';
-    const matchedHospital = findHospitalMatch(hospitals, extractedHospital);
-    const nextCmeItems = itemsFromExtraction('CME', result.cmeItems);
-    const nextOpmeItems = itemsFromExtraction('OPME', result.opmeItems);
-    const missingItems = [...nextCmeItems, ...nextOpmeItems].filter((item) => item.description.trim() && !item.inventoryItemId);
-
-    setForm((current) => ({
-      ...current,
-      hospitalId: matchedHospital?.id || current.hospitalId,
-      hospital: matchedHospital?.name || current.hospital,
-      surgeon: result.surgeon || current.surgeon,
-      patient: result.patient || current.patient,
-      surgeryDate: normalizeExtractedDate(result.surgeryDate) || current.surgeryDate,
-      surgeryTime: normalizeExtractedTime(result.surgeryTime) || current.surgeryTime,
-      procedure: result.procedure || current.procedure,
-      insurance: result.insurance || current.insurance,
-      observation: result.observation || current.observation,
-    }));
-    setCmeItems(nextCmeItems);
-    setOpmeItems(nextOpmeItems);
-    setInventoryNotice(
-      missingItems.length
-        ? `${missingItems.length} material(is) não encontrado(s) no estoque. Revise e cadastre pelo botão ao lado do item.`
-        : 'Materiais reconhecidos e vinculados ao estoque quando encontrados.'
-    );
-
-    if (extractedHospital.trim() && !matchedHospital) {
-      setQuickHospitalName(extractedHospital.trim());
-      setQuickHospitalError('');
-      setQuickHospitalOpen(true);
-    }
-  };
-
-  const closeQuickHospital = () => {
-    if (!quickHospitalSaving) setQuickHospitalOpen(false);
-  };
-
-  const saveQuickHospital = async () => {
-    const name = quickHospitalName.trim();
-    if (!name) {
-      setQuickHospitalError('Informe o nome do hospital.');
-      return;
-    }
-
-    const existing = findHospitalMatch(hospitals, name);
-    if (existing) {
-      selectHospital(existing);
-      setQuickHospitalOpen(false);
-      return;
-    }
-
-    setQuickHospitalSaving(true);
-    setQuickHospitalError('');
-
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { data, error: insertError } = await supabase
-        .from('hospitals')
-        .insert({
-          name,
-          address: '',
-          loading_access: '',
-          cme_location: '',
-          opme_location: '',
-          surgical_center_location: '',
-          notes: '',
-          maps_query: '',
-          active: true,
-          created_by: userData.user?.id,
-        })
-        .select('*')
-        .single();
-
-      if (insertError) throw insertError;
-
-      const savedHospital = data as Hospital;
-      setHospitals((current) => [...current, savedHospital].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
-      selectHospital(savedHospital);
-      setQuickHospitalOpen(false);
-    } catch (caughtError) {
-      setQuickHospitalError(caughtError instanceof Error ? caughtError.message : 'Não foi possível cadastrar o hospital.');
-    } finally {
-      setQuickHospitalSaving(false);
-    }
-  };
-
-  const processFile = async (file: File) => {
-    const maxFileSize = 4 * 1024 * 1024;
-    if (!file.type.startsWith('image/')) {
-      setAttachment(null);
-      setAttachmentPreview('');
-      setReadSuccess(false);
-      setReadError('Envie uma imagem da solicitação. Arquivos Word foram desativados neste fluxo.');
-      return;
-    }
-
-    setAttachment(file);
-    setAttachmentPreview('');
-    setReadSuccess(false);
-    setReadError('');
-    setError('');
-
-    setReading(true);
-    try {
-      const previewDataUrl = file.type.startsWith('image/') ? await readFileAsDataUrl(file) : '';
-      setAttachmentPreview(previewDataUrl);
-      const analysisFile = await prepareImageForAnalysis(file);
-      if (analysisFile.size > maxFileSize) {
-        throw new Error('O arquivo precisa ter no máximo 4 MB para ser processado pela IA.');
-      }
-
-      if (analysisFile !== file) {
-        setAttachment(analysisFile);
-      }
-
-      const dataUrl = analysisFile === file && previewDataUrl ? previewDataUrl : await readFileAsDataUrl(analysisFile);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) throw new Error('Sessão ausente. Entre novamente.');
-
-      const response = await fetch('/api/extract', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          file: dataUrl,
-          filename: analysisFile.name,
-          mimeType: analysisFile.type,
-        }),
-      });
-      const payload = (await response.json().catch(() => null)) as { result?: ExtractionResult; error?: string; detail?: string } | null;
-      if (!response.ok || !payload?.result) throw new Error(payload?.detail || payload?.error || 'Falha na leitura');
-      applyExtraction(payload.result);
-      setReadSuccess(true);
-    } catch (caughtError) {
-      const message = caughtError instanceof Error ? caughtError.message : 'Não foi possível ler o arquivo.';
-      setReadError(friendlyReadError(message));
-    } finally {
-      setReading(false);
-    }
-  };
-
-  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    setAttachment(file);
-    setAttachmentPreview('');
-    setReadSuccess(false);
-    setReadError('');
-    setError('');
-    void processFile(file);
-  };
-
   const saveRequest = async () => {
     if (!form.hospitalId) {
       setError('Selecione o hospital. Se ele ainda não existir, clique em “Adicionar hospital”.');
@@ -622,7 +330,6 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     setError('');
 
     try {
-      const origin = attachment ? 'image' : 'manual';
       const { data, error: createError } = await supabase.rpc('create_surgery_request_with_instrumentators', {
         request_data: {
           hospital_id: form.hospitalId,
@@ -636,7 +343,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
           assigned_instrumentator_ids: form.assignedInstrumentatorIds,
           observation: form.observation,
           priority,
-          origin,
+          origin: 'manual',
         },
         items_data: items,
       });
@@ -763,39 +470,6 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
         </div>
       </header>
 
-      <section className="request-source-card">
-        <div className="request-source-copy">
-          <span className="request-source-icon"><ScanText size={22} /></span>
-          <div>
-            <h2>Preencher a partir de um documento</h2>
-            <p>Fotos da solicitação são analisadas pela IA para preencher os campos automaticamente. Revise tudo antes de salvar.</p>
-          </div>
-        </div>
-        <div className="request-source-actions">
-          <label>
-            <input accept="image/*" capture="environment" type="file" onChange={handleFile} />
-            <Camera size={18} /> Tirar foto
-          </label>
-          <label>
-            <input accept="image/*" type="file" onChange={handleFile} />
-            <FileUp size={18} /> Enviar imagem
-          </label>
-        </div>
-        {attachment && (
-          <div className={`request-attachment ${reading ? 'loading' : readSuccess ? 'success' : readError ? 'error' : ''}`}>
-            {attachmentPreview ? <img src={attachmentPreview} alt="Documento anexado" /> : <span><Upload size={20} /></span>}
-            <div>
-              <strong>{attachment.name}</strong>
-              <small>
-                {reading ? 'Analisando com IA...' : readSuccess ? 'Campos preenchidos. Revise antes de salvar.' : readError ? 'Não foi possível analisar com IA.' : 'Arquivo anexado.'}
-              </small>
-              {readError && <p className="request-read-error">{readError}</p>}
-            </div>
-            {reading ? <LoaderCircle className="spin" size={20} /> : readSuccess ? <Check size={20} /> : readError ? <AlertCircle size={20} /> : null}
-          </div>
-        )}
-      </section>
-
       <section className="request-form-card">
         <div className="request-section-heading">
           <div>
@@ -887,39 +561,6 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
         <HospitalModal hospital={null} onClose={() => setHospitalModalOpen(false)} onSaved={(hospital) => void handleHospitalSaved(hospital)} />
       )}
 
-      {quickHospitalOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeQuickHospital()}>
-          <section className="quick-hospital-modal" role="dialog" aria-modal="true" aria-labelledby="quick-hospital-title">
-            <header>
-              <div>
-                <p className="eyebrow">hospital não encontrado</p>
-                <h2 id="quick-hospital-title">Cadastrar hospital?</h2>
-                <span>A IA encontrou este nome, mas ele não existe na lista de hospitais.</span>
-              </div>
-              <button className="icon-button" type="button" onClick={closeQuickHospital} aria-label="Fechar cadastro rápido">
-                <X size={20} />
-              </button>
-            </header>
-
-            <label>
-              <span>Nome do hospital</span>
-              <input value={quickHospitalName} onChange={(event) => setQuickHospitalName(event.target.value)} autoFocus />
-            </label>
-
-            {quickHospitalError && <p className="auth-message error">{quickHospitalError}</p>}
-
-            <footer>
-              <button className="card-detail-button" type="button" onClick={closeQuickHospital} disabled={quickHospitalSaving}>
-                Cancelar
-              </button>
-              <button className="card-action-button" type="button" onClick={() => void saveQuickHospital()} disabled={quickHospitalSaving}>
-                {quickHospitalSaving ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />}
-                {quickHospitalSaving ? 'Cadastrando...' : 'Cadastrar e selecionar'}
-              </button>
-            </footer>
-          </section>
-        </div>
-      )}
     </section>
   );
 
@@ -933,7 +574,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
             <p className="eyebrow">Operação logística</p>
             <h2 id="new-request-title">Nova solicitação</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar nova solicitação" disabled={saving || reading}>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar nova solicitação" disabled={saving}>
             <X size={20} />
           </button>
         </header>

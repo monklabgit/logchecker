@@ -790,7 +790,6 @@ select:focus {
   font-size: 14px;
 }
 
-.request-source-card,
 .request-form-card,
 .request-section {
   min-width: 0;
@@ -808,148 +807,6 @@ select:focus {
 .request-section .request-items,
 .request-section .inventory-search input {
   min-width: 0;
-}
-
-.request-source-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
-}
-
-.request-source-copy {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.request-source-icon {
-  display: inline-grid;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 10px;
-  background: rgba(16, 167, 163, 0.12);
-  color: var(--teal-dark);
-}
-
-.request-source-copy h2 {
-  font-size: 16px;
-}
-
-.request-source-copy p {
-  max-width: 600px;
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.request-source-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.request-source-actions label,
-.request-source-actions button {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--navy);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.request-source-actions label:last-child,
-.request-source-actions button:last-child {
-  border-color: var(--teal);
-  background: var(--teal);
-  color: #fff;
-}
-
-.request-source-actions input,
-.visually-hidden-file {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.request-attachment {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: 48px minmax(0, 1fr) 28px;
-  gap: 10px;
-  align-items: center;
-  padding: 9px;
-  border: 1px solid rgba(16, 167, 163, 0.24);
-  border-radius: 9px;
-  background: rgba(16, 167, 163, 0.07);
-  color: var(--teal-dark);
-}
-
-.request-attachment.success {
-  border-color: rgba(27, 154, 90, 0.35);
-  background: rgba(27, 154, 90, 0.08);
-  color: #1b9a5a;
-}
-
-.request-attachment.error {
-  border-color: rgba(180, 35, 24, 0.32);
-  background: #fff1f0;
-  color: var(--danger);
-}
-
-.request-attachment img,
-.request-attachment > span {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #fff;
-}
-
-.request-attachment div {
-  display: grid;
-  min-width: 0;
-  gap: 3px;
-}
-
-.request-attachment strong {
-  overflow: hidden;
-  color: var(--navy);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.request-attachment small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.request-attachment.error small {
-  color: var(--danger);
-  font-weight: 800;
-}
-
-.request-read-error {
-  margin: 0;
-  color: var(--danger);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.35;
 }
 
 .request-section-heading {
@@ -1574,48 +1431,6 @@ select:focus {
   border-color: var(--teal);
   background: var(--teal);
   color: #fff;
-}
-
-.quick-hospital-modal {
-  display: grid;
-  width: min(430px, 100%);
-  gap: 14px;
-  padding: 18px;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
-}
-
-.quick-hospital-modal header,
-.quick-hospital-modal footer {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.quick-hospital-modal h2 {
-  margin-top: 3px;
-  font-size: 21px;
-}
-
-.quick-hospital-modal header span {
-  display: block;
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.quick-hospital-modal footer {
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.quick-hospital-modal footer button {
-  min-height: 42px;
-  padding: 0 13px;
-  font-size: 13px;
 }
 
 .action-modal {
@@ -4136,13 +3951,6 @@ select:focus {
     display: block;
   }
 
-  .request-source-card {
-    grid-template-columns: 1fr;
-  }
-
-  .request-source-actions {
-    justify-content: flex-start;
-  }
 
   .operational-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4406,10 +4214,6 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
-  .request-source-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
 
   .request-item-row {
     grid-template-columns: 1fr;
