@@ -1,4 +1,4 @@
-import { FileText, Minus, Plus, Printer, Tags, X } from 'lucide-react';
+import { CheckSquare, FileText, Minus, Plus, Printer, Tags, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { RequestItem, SurgeryRequest } from '../types';
@@ -155,11 +155,29 @@ function SurgeryRequestSheet({ request, copy }: { request: SurgeryRequest; copy:
   );
 }
 
-function CmeLabelsSheet({ request, labels, page }: { request: SurgeryRequest; labels: CmeLabel[]; page: number }) {
+function CmeLabelsSheet({
+  request,
+  labels,
+  page,
+  selectedLabelKeys,
+  onToggleLabel,
+}: {
+  request: SurgeryRequest;
+  labels: CmeLabel[];
+  page: number;
+  selectedLabelKeys: Set<string>;
+  onToggleLabel: (key: string) => void;
+}) {
   return (
     <article className="cme-labels-print-page" aria-label={`Etiquetas CME, página ${page}`}>
-      {labels.map((label) => (
-        <section className="cme-box-label" key={label.key}>
+      {labels.map((label) => {
+        const selected = selectedLabelKeys.has(label.key);
+        return (
+          <section className={`cme-box-label ${selected ? 'selected' : ''}`} key={label.key}>
+            <label className="cme-label-selector">
+              <input type="checkbox" checked={selected} onChange={() => onToggleLabel(label.key)} />
+              <span>{selected ? 'Selecionada' : 'Selecionar'}</span>
+            </label>
           <header>
             <span>{request.hospital || 'HOSPITAL NÃO INFORMADO'}</span>
             <small>{label.boxCount === 1 ? '1 caixa' : `${label.boxCount} caixas`}</small>
@@ -191,8 +209,9 @@ function CmeLabelsSheet({ request, labels, page }: { request: SurgeryRequest; la
               <dd>{request.procedure || 'Não informado'}</dd>
             </div>
           </dl>
-        </section>
-      ))}
+          </section>
+        );
+      })}
     </article>
   );
 }
@@ -200,14 +219,22 @@ function CmeLabelsSheet({ request, labels, page }: { request: SurgeryRequest; la
 export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPrintModalProps) {
   const [mode, setMode] = useState<PrintMode>('request');
   const [copies, setCopies] = useState(1);
+  const [selectedLabelKeys, setSelectedLabelKeys] = useState<Set<string>>(() => new Set());
+  const [printLabelKeys, setPrintLabelKeys] = useState<Set<string> | null>(null);
   const requestPages = useMemo(() => Array.from({ length: copies }, (_, index) => index + 1), [copies]);
   const cmeLabels = useMemo(() => buildCmeLabels(request.request_items), [request.request_items]);
-  const labelPages = useMemo(() => paginate(cmeLabels, labelsPerPage), [cmeLabels]);
+  const labelsToRender = useMemo(
+    () => printLabelKeys ? cmeLabels.filter((label) => printLabelKeys.has(label.key)) : cmeLabels,
+    [cmeLabels, printLabelKeys]
+  );
+  const labelPages = useMemo(() => paginate(labelsToRender, labelsPerPage), [labelsToRender]);
+  const selectedLabelCount = selectedLabelKeys.size;
 
   useEffect(() => {
     const finishPrinting = () => {
       document.documentElement.classList.remove('printing-mobile-surgery-request');
       document.body.classList.remove('printing-surgery-request', 'printing-mobile-surgery-request');
+      setPrintLabelKeys(null);
     };
     window.addEventListener('afterprint', finishPrinting);
     return () => {
@@ -216,13 +243,27 @@ export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPri
     };
   }, []);
 
-  const print = () => {
-    if (mode === 'labels' && !cmeLabels.length) return;
+  const print = (labelKeys: Set<string> | null = null) => {
+    if (mode === 'labels' && (!cmeLabels.length || (labelKeys && !labelKeys.size))) return;
+    setPrintLabelKeys(labelKeys);
     const isMobilePrint = window.matchMedia('(max-width: 720px)').matches;
     document.documentElement.classList.toggle('printing-mobile-surgery-request', isMobilePrint);
     document.body.classList.add('printing-surgery-request');
     document.body.classList.toggle('printing-mobile-surgery-request', isMobilePrint);
     window.setTimeout(() => window.print(), 80);
+  };
+
+  const toggleLabel = (key: string) => {
+    setSelectedLabelKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAllLabels = () => {
+    setSelectedLabelKeys(new Set(cmeLabels.map((label) => label.key)));
   };
 
   const subtitle = mode === 'request'
@@ -264,10 +305,34 @@ export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPri
                   </button>
                 </div>
               )}
-              <button className="card-action-button" type="button" onClick={print} disabled={mode === 'labels' && !cmeLabels.length}>
-                <Printer size={18} />
-                Imprimir
-              </button>
+              {mode === 'labels' && cmeLabels.length > 0 && (
+                <div className="label-selection-actions">
+                  <button type="button" onClick={selectAllLabels}>
+                    <CheckSquare size={16} />
+                    Selecionar todas
+                  </button>
+                  <button type="button" onClick={() => setSelectedLabelKeys(new Set())} disabled={!selectedLabelCount}>
+                    Limpar
+                  </button>
+                </div>
+              )}
+              {mode === 'request' ? (
+                <button className="card-action-button" type="button" onClick={() => print()}>
+                  <Printer size={18} />
+                  Imprimir
+                </button>
+              ) : (
+                <>
+                  <button className="secondary-button print-all-labels-button" type="button" onClick={() => print()} disabled={!cmeLabels.length}>
+                    <Printer size={17} />
+                    Imprimir todas
+                  </button>
+                  <button className="card-action-button" type="button" onClick={() => print(new Set(selectedLabelKeys))} disabled={!selectedLabelCount}>
+                    <Printer size={18} />
+                    Imprimir selecionadas ({selectedLabelCount})
+                  </button>
+                </>
+              )}
               <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar impressão">
                 <X size={20} />
               </button>
@@ -277,7 +342,14 @@ export function SurgeryRequestPrintModal({ request, onClose }: SurgeryRequestPri
           <div className={`print-pages-preview ${mode === 'labels' ? 'labels-preview' : ''}`}>
             {mode === 'request' && requestPages.map((copy) => <SurgeryRequestSheet request={request} copy={copy} key={copy} />)}
             {mode === 'labels' && labelPages.map((labels, index) => (
-              <CmeLabelsSheet request={request} labels={labels} page={index + 1} key={`labels-${index + 1}`} />
+              <CmeLabelsSheet
+                request={request}
+                labels={labels}
+                page={index + 1}
+                selectedLabelKeys={selectedLabelKeys}
+                onToggleLabel={toggleLabel}
+                key={`labels-${index + 1}`}
+              />
             ))}
             {mode === 'labels' && !cmeLabels.length && (
               <div className="cme-labels-empty">
