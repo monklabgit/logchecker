@@ -117,13 +117,22 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     else setLoading(true);
     setError('');
 
-    const { data, error: queryError } = await supabase
+    const instrumentatorAssignmentJoin =
+      profile.role === 'instrumentator'
+        ? ', surgery_request_instrumentators!inner(instrumentator_id)'
+        : '';
+    let requestQuery = supabase
       .from('surgery_requests')
       .select(
-        '*, hospital_record:hospitals(*), request_items(*), transport_tasks(*, assigned_driver:profiles!transport_tasks_assigned_driver_id_fkey(id, full_name)), transport_evidence_photos(*)'
+        `*, hospital_record:hospitals(*), request_items(*), transport_tasks(*, assigned_driver:profiles!transport_tasks_assigned_driver_id_fkey(id, full_name)), transport_evidence_photos(*)${instrumentatorAssignmentJoin}`
       )
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false });
+      .neq('status', 'cancelled');
+
+    if (profile.role === 'instrumentator') {
+      requestQuery = requestQuery.eq('surgery_request_instrumentators.instrumentator_id', profile.id);
+    }
+
+    const { data, error: queryError } = await requestQuery.order('created_at', { ascending: false });
 
     if (queryError) {
       setError(queryError.message);
@@ -153,7 +162,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
 
     setLoading(false);
     setRefreshing(false);
-  }, [highlightedRequestId, refreshKey]);
+  }, [highlightedRequestId, profile.id, profile.role, refreshKey]);
 
   useEffect(() => {
     void loadRequests();
@@ -163,6 +172,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       .on('postgres_changes', { event: '*', schema: 'public', table: 'surgery_requests' }, () => void loadRequests(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transport_tasks' }, () => void loadRequests(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transport_evidence_photos' }, () => void loadRequests(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'surgery_request_instrumentators' }, () => void loadRequests(true))
       .subscribe();
 
     return () => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'logchecker-v33';
+const CACHE_NAME = 'logchecker-v34';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon.svg'];
 const CACHEABLE_DESTINATIONS = new Set(['style', 'script', 'image', 'font', 'manifest']);
 
