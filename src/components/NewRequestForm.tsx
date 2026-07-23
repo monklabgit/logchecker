@@ -3,6 +3,7 @@ import { AlertCircle, Camera, Check, FileUp, LoaderCircle, Minus, Plus, Save, Sc
 import { supabase } from '../supabase';
 import type { Hospital, InventoryCategory, InventoryItem, Profile } from '../types';
 import { HospitalModal } from './HospitalModal';
+import { InstrumentatorMultiSelect } from './InstrumentatorMultiSelect';
 
 type SectionName = 'CME' | 'OPME';
 
@@ -24,7 +25,7 @@ type RequestForm = {
   procedure: string;
   insurance: string;
   observation: string;
-  assignedInstrumentatorId: string;
+  assignedInstrumentatorIds: string[];
 };
 
 type AiMaterialItem = {
@@ -62,7 +63,7 @@ const initialForm: RequestForm = {
   procedure: '',
   insurance: '',
   observation: '',
-  assignedInstrumentatorId: '',
+  assignedInstrumentatorIds: [],
 };
 
 const makeEmptyItem = (): MaterialItem => ({
@@ -266,7 +267,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     };
   }, []);
 
-  const updateForm = (key: keyof RequestForm, value: string) => {
+  const updateForm = <K extends keyof RequestForm>(key: K, value: RequestForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
@@ -622,7 +623,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
 
     try {
       const origin = attachment ? 'image' : 'manual';
-      const { data, error: createError } = await supabase.rpc('create_surgery_request', {
+      const { data, error: createError } = await supabase.rpc('create_surgery_request_with_instrumentators', {
         request_data: {
           hospital_id: form.hospitalId,
           hospital: form.hospital,
@@ -632,7 +633,7 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
           surgery_time: form.surgeryTime,
           procedure: form.procedure,
           insurance: form.insurance,
-          assigned_instrumentator_id: form.assignedInstrumentatorId || null,
+          assigned_instrumentator_ids: form.assignedInstrumentatorIds,
           observation: form.observation,
           priority,
           origin,
@@ -844,15 +845,14 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
             <span>Convênio</span>
             <input value={form.insurance} onChange={(event) => updateForm('insurance', event.target.value)} placeholder="Ex.: SUS, Unimed, particular" />
           </label>
-          <label>
-            <span>Instrumentador</span>
-            <select value={form.assignedInstrumentatorId} onChange={(event) => updateForm('assignedInstrumentatorId', event.target.value)}>
-              <option value="">Designar depois</option>
-              {instrumentators.map((instrumentator) => (
-                <option value={instrumentator.id} key={instrumentator.id}>{instrumentator.full_name}</option>
-              ))}
-            </select>
-          </label>
+          <div className="multi-select-field">
+            <span>Instrumentadores</span>
+            <InstrumentatorMultiSelect
+              options={instrumentators}
+              selectedIds={form.assignedInstrumentatorIds}
+              onChange={(selectedIds) => updateForm('assignedInstrumentatorIds', selectedIds)}
+            />
+          </div>
           <label>
             <span>Prioridade</span>
             <select value={priority} onChange={(event) => setPriority(event.target.value)}>

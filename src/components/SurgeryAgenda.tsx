@@ -12,6 +12,7 @@ import {
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { AgendaRequest, Profile } from '../types';
+import { InstrumentatorMultiSelect } from './InstrumentatorMultiSelect';
 
 type SurgeryAgendaProps = {
   profile: Profile;
@@ -116,7 +117,7 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
     setInstrumentators((instrumentatorsResult.data || []) as Pick<Profile, 'id' | 'full_name'>[]);
     setMyUpcoming(
       ((upcomingResult.data || []) as AgendaRequest[])
-        .filter((request) => request.assigned_instrumentator_id === profile.id)
+        .filter((request) => request.assigned_instrumentator_ids.includes(profile.id))
         .sort(bySchedule)
     );
     setLoading(false);
@@ -128,6 +129,7 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
     const channel = supabase
       .channel(`surgery-agenda-${profile.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'surgery_requests' }, () => void loadAgenda(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'surgery_request_instrumentators' }, () => void loadAgenda(true))
       .subscribe();
 
     return () => {
@@ -176,31 +178,37 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
     setSelectedDate(todayKey);
   };
 
-  const assignInstrumentator = async (request: AgendaRequest, instrumentatorId: string) => {
+  const assignInstrumentators = async (request: AgendaRequest, instrumentatorIds: string[]) => {
     setAssigningId(request.id);
     setError('');
     setNotice('');
 
-    const { error: assignmentError } = await supabase.rpc('assign_request_instrumentator', {
+    const { error: assignmentError } = await supabase.rpc('set_request_instrumentators', {
       target_request_id: request.id,
-      target_instrumentator_id: instrumentatorId || null,
+      target_instrumentator_ids: instrumentatorIds,
     });
 
     if (assignmentError) {
       setError(assignmentError.message);
     } else {
-      const selected = instrumentators.find((item) => item.id === instrumentatorId);
+      const selectedNames = instrumentators
+        .filter((item) => instrumentatorIds.includes(item.id))
+        .map((item) => item.full_name);
       const updateRequest = (item: AgendaRequest) =>
         item.id === request.id
           ? {
               ...item,
-              assigned_instrumentator_id: instrumentatorId || null,
-              assigned_instrumentator_name: selected?.full_name || null,
+              assigned_instrumentator_ids: instrumentatorIds,
+              assigned_instrumentator_names: selectedNames,
             }
           : item;
       setRequests((current) => current.map(updateRequest));
       setMyUpcoming((current) => current.map(updateRequest));
-      setNotice(instrumentatorId ? 'Instrumentador designado com sucesso.' : 'Designação removida.');
+      setNotice(
+        instrumentatorIds.length
+          ? `${instrumentatorIds.length} instrumentador(es) designado(s) com sucesso.`
+          : 'Designações removidas.'
+      );
     }
 
     setAssigningId('');
@@ -307,7 +315,7 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
                   <span className="agenda-day-number">{day.getDate()}</span>
                   <div className="agenda-day-events">
                     {dayRequests.slice(0, 3).map((request) => (
-                      <span className={request.assigned_instrumentator_id ? 'assigned' : 'unassigned'} key={request.id}>
+                      <span className={request.assigned_instrumentator_ids.length ? 'assigned' : 'unassigned'} key={request.id}>
                         <b>{formatTime(request.surgery_time).replace('Horário não informado', '--:--')}</b>
                         {request.hospital}
                       </span>
@@ -348,25 +356,24 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
                 </div>
               </div>
               <div className="agenda-assignment">
-                <label>
-                  <span>Instrumentador</span>
+                <div className="multi-select-field">
+                  <span>Instrumentadores</span>
                   {canAssign ? (
-                    <select
-                      value={request.assigned_instrumentator_id || ''}
-                      onChange={(event) => void assignInstrumentator(request, event.target.value)}
+                    <InstrumentatorMultiSelect
+                      options={instrumentators}
+                      selectedIds={request.assigned_instrumentator_ids}
+                      onChange={(selectedIds) => void assignInstrumentators(request, selectedIds)}
                       disabled={assigningId === request.id}
-                    >
-                      <option value="">Não designado</option>
-                      {instrumentators.map((instrumentator) => (
-                        <option value={instrumentator.id} key={instrumentator.id}>{instrumentator.full_name}</option>
-                      ))}
-                    </select>
+                      placeholder="Não designado"
+                    />
                   ) : (
-                    <strong className={request.assigned_instrumentator_name ? '' : 'empty'}>
-                      {request.assigned_instrumentator_name || 'Não designado'}
-                    </strong>
+                    <div className={request.assigned_instrumentator_names.length ? 'agenda-assigned-list' : 'agenda-assigned-list empty'}>
+                      {request.assigned_instrumentator_names.length
+                        ? request.assigned_instrumentator_names.map((name) => <strong key={name}>{name}</strong>)
+                        : <strong>Não designado</strong>}
+                    </div>
                   )}
-                </label>
+                </div>
                 {assigningId === request.id && <LoaderCircle className="spin" size={17} />}
               </div>
             </article>

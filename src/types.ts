@@ -156,8 +156,8 @@ export type AgendaRequest = {
   procedure: string;
   status: RequestStatus;
   priority: number;
-  assigned_instrumentator_id: string | null;
-  assigned_instrumentator_name: string | null;
+  assigned_instrumentator_ids: string[];
+  assigned_instrumentator_names: string[];
 };
 export type TransportEvent = {
   id: number;
