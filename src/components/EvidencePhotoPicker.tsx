@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Camera, Image as ImageIcon, LoaderCircle, X } from 'lucide-react';
 import type { EvidencePickerPhoto } from '../usePersistedEvidence';
 
@@ -64,6 +65,17 @@ export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel =
     return () => {
       active = false;
       stopCamera();
+    };
+  }, [cameraOpen]);
+
+  useEffect(() => {
+    if (!cameraOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
     };
   }, [cameraOpen]);
 
@@ -151,29 +163,46 @@ export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel =
         }}
       />
 
-      {cameraOpen && (
-        <div className="camera-panel">
-          <div className="camera-preview">
-            {cameraLoading && (
-              <span>
-                <LoaderCircle className="spin" size={22} />
-                Abrindo câmera...
-              </span>
-            )}
-            <video ref={videoRef} playsInline muted autoPlay />
-          </div>
-          {cameraError && <p className="camera-error">{cameraError}</p>}
-          <div className="camera-actions">
-            <button className="secondary-button" type="button" onClick={() => setCameraOpen(false)}>
-              Cancelar
-            </button>
-            <button className="card-action-button" type="button" onClick={capturePhoto} disabled={cameraLoading || Boolean(cameraError)}>
-              <Camera size={17} />
-              Capturar foto
-            </button>
-          </div>
-        </div>
-      )}
+      {cameraOpen &&
+        createPortal(
+          <div className="camera-overlay" role="presentation">
+            <section className="camera-panel" role="dialog" aria-modal="true" aria-labelledby="camera-title">
+              <header className="camera-panel-header">
+                <div>
+                  <strong id="camera-title">Capturar foto</strong>
+                  <span>Enquadre o material antes de fotografar.</span>
+                </div>
+                <button className="icon-button" type="button" onClick={() => setCameraOpen(false)} aria-label="Fechar câmera">
+                  <X size={20} />
+                </button>
+              </header>
+
+              <div className="camera-stage">
+                <div className="camera-preview">
+                  {cameraLoading && (
+                    <span>
+                      <LoaderCircle className="spin" size={22} />
+                      Abrindo câmera...
+                    </span>
+                  )}
+                  <video ref={videoRef} playsInline muted autoPlay />
+                </div>
+                {cameraError && <p className="camera-error">{cameraError}</p>}
+              </div>
+
+              <div className="camera-actions">
+                <button className="secondary-button" type="button" onClick={() => setCameraOpen(false)}>
+                  Cancelar
+                </button>
+                <button className="card-action-button" type="button" onClick={capturePhoto} disabled={cameraLoading || Boolean(cameraError)}>
+                  <Camera size={17} />
+                  Capturar foto
+                </button>
+              </div>
+            </section>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
