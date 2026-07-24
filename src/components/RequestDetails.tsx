@@ -56,6 +56,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
   const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState('');
   const [releaseSavedMessage, setReleaseSavedMessage] = useState('');
+  const [releaseObservation, setReleaseObservation] = useState(request.release_observation || '');
   const [dispatchConfirmationOpen, setDispatchConfirmationOpen] = useState(false);
   const [kitControlOpen, setKitControlOpen] = useState(false);
   const [kitControlDispatchOnOpen, setKitControlDispatchOnOpen] = useState(false);
@@ -198,6 +199,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
 
       const { error: releaseError } = await supabase.rpc('release_request_for_pickup_with_evidence', {
         target_request_id: request.id,
+        action_observation: releaseObservation.trim(),
       });
       if (releaseError) throw releaseError;
 
@@ -355,6 +357,18 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
             </section>
           )}
 
+          {request.release_observation && (
+            <section className="details-delivery-receipt">
+              <h3><PackageOpen size={18} /> Dados da liberação</h3>
+              <dl className="compact-details-list">
+                <div>
+                  <dt>Observação da liberação</dt>
+                  <dd>{request.release_observation}</dd>
+                </div>
+              </dl>
+            </section>
+          )}
+
           <section className="details-history">
             <button className="details-history-toggle" type="button" onClick={() => setHistoryOpen((current) => !current)} aria-expanded={historyOpen}>
               <span><History size={18} /> Histórico</span>
@@ -425,6 +439,17 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
 
         {request.status === 'delivered' && access.release_materials && (
           <footer className="details-footer release-footer">
+            <label className="release-observation-field">
+              <span>Observação da liberação (opcional)</span>
+              <textarea
+                value={releaseObservation}
+                onChange={(event) => setReleaseObservation(event.target.value)}
+                rows={3}
+                maxLength={2000}
+                placeholder="Ex.: material faltante, danificado ou outra ocorrência"
+                disabled={releasing}
+              />
+            </label>
             {releaseEvidence.loading ? (
               <div className="evidence-loading"><LoaderCircle className="spin" size={20} /> Carregando fotos salvas...</div>
             ) : (

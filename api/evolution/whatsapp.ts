@@ -168,6 +168,7 @@ const buildNotificationMessage = (
     surgery_time: string | null;
     procedure: string;
     insurance: string;
+    release_observation: string;
     request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
     transport_tasks: Array<{
       type: string;
@@ -214,6 +215,9 @@ const buildNotificationMessage = (
     sectionBlock(request, 'OPME'),
     '===============',
     ...deliveryReceipt,
+    eventType === 'release_completed' && request.release_observation
+      ? `Observação da liberação: ${request.release_observation}`
+      : '',
     `${actionLineForEvent(eventType)}: ${actorName || 'Usuário LogChecker'}`,
     eventType === 'kit_control' && kitControlSummary
       ? `Evidências enviadas agora: ${photoCount}`
@@ -500,7 +504,7 @@ const profileId = userData.user.id;
       const [{ data: request, error: requestError }, { data: profile }] = await Promise.all([
         supabase
           .from('surgery_requests')
-          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, insurance, request_items(section, quantity, description, note), transport_tasks(type, status, completed_at, delivery_received_cme, delivery_received_opme, delivery_observation)')
+          .select('id, code, hospital, surgeon, patient, surgery_date, surgery_time, procedure, insurance, release_observation, request_items(section, quantity, description, note), transport_tasks(type, status, completed_at, delivery_received_cme, delivery_received_opme, delivery_observation)')
           .eq('id', body.requestId)
           .single(),
         supabase.from('profiles').select('full_name').eq('id', profileId).maybeSingle(),
@@ -570,6 +574,7 @@ const profileId = userData.user.id;
         surgery_time: string | null;
         procedure: string;
         insurance: string;
+        release_observation: string;
         request_items: Array<{ section: string; quantity: string; description: string; note: string }>;
         transport_tasks: Array<{
           type: string;

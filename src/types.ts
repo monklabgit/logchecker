@@ -137,6 +137,7 @@ export type SurgeryRequest = {
   assigned_instrumentator: { id: string; full_name: string } | null;
   instrumentator_assignments?: { instrumentator_id: string }[];
   observation: string;
+  release_observation: string;
   origin: 'manual' | 'image' | 'document';
   status: RequestStatus;
   priority: number;
