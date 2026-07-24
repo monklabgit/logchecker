@@ -148,7 +148,7 @@ export function InstrumentatorMultiSelect({
           >
             <div className="instrumentator-picker-header">
               <div>
-                <strong id={`instrumentator-title-${pickerId}`}>Designar instrumentadores</strong>
+                <strong id={`instrumentator-title-${pickerId}`}>Designar Instrumentadores</strong>
                 <span>{selectedNames.length ? `${selectedNames.length} selecionado${selectedNames.length > 1 ? 's' : ''}` : 'Seleção opcional'}</span>
               </div>
               <button

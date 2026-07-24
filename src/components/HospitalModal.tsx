@@ -122,7 +122,7 @@ export function HospitalModal({ hospital, onClose, onSaved }: HospitalModalProps
         <header className="details-header">
           <div>
             <span className="request-code">{editing ? 'Editando cadastro' : 'Novo cadastro'}</span>
-            <h2 id="hospital-modal-title">{editing ? form.name || 'Hospital' : 'Dados do hospital'}</h2>
+            <h2 id="hospital-modal-title">{editing ? form.name || 'Hospital' : 'Dados do Hospital'}</h2>
             <p>Preencha os detalhes que ajudam entrega, retirada e navegação.</p>
           </div>
           <button className="icon-button" type="button" onClick={closeModal} aria-label="Fechar cadastro">

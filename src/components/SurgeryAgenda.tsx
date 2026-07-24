@@ -226,7 +226,7 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
     <section className="agenda-view">
       <header className="page-heading agenda-page-heading">
         <div>
-          <p className="eyebrow">Planejamento cirúrgico</p>
+          <p className="eyebrow">Planejamento Cirúrgico</p>
           <h1>Agenda</h1>
           <span>Visualize as cirurgias e acompanhe as designações dos instrumentadores.</span>
         </div>
@@ -242,8 +242,8 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
             <header>
               <span><CalendarDays size={18} /></span>
               <div>
-                <p>Minha agenda</p>
-                <h2>Cirurgias de hoje</h2>
+                <p>Minha Agenda</p>
+                <h2>Cirurgias de Hoje</h2>
               </div>
               <strong>{todayAssignments.length}</strong>
             </header>
@@ -260,8 +260,8 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
             <header>
               <span><Clock3 size={18} /></span>
               <div>
-                <p>Próximo compromisso</p>
-                <h2>Próximas cirurgias</h2>
+                <p>Próximo Compromisso</p>
+                <h2>Próximas Cirurgias</h2>
               </div>
             </header>
             <div className="agenda-summary-content">
@@ -333,7 +333,7 @@ export function SurgeryAgenda({ profile, access }: SurgeryAgendaProps) {
       <section className="agenda-day-schedule">
         <header>
           <div>
-            <p>Programação do dia</p>
+            <p>Programação do Dia</p>
             <h2>{fullDateFormatter.format(parseDate(selectedDate))}</h2>
           </div>
           <span>{selectedRequests.length} cirurgia(s)</span>

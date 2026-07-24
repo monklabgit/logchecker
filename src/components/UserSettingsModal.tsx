@@ -213,7 +213,7 @@ export function UserSettingsPage({ profile, session, canManageWhatsapp }: UserSe
           <div className="settings-section-title">
             <UserRound size={20} />
             <div>
-              <h3>Dados pessoais</h3>
+              <h3>Dados Pessoais</h3>
               <p>Atualize seu nome e o número que será usado nas futuras rotinas de WhatsApp.</p>
             </div>
           </div>
@@ -312,7 +312,7 @@ export function UserSettingsPage({ profile, session, canManageWhatsapp }: UserSe
                   <div className="whatsapp-group-settings-title">
                     <UsersRound size={18} />
                     <div>
-                      <strong>Grupos de disparo</strong>
+                      <strong>Grupos de Disparo</strong>
                       <span>Destinos globais usados por todos os usuários do LogChecker.</span>
                     </div>
                   </div>

@@ -82,7 +82,7 @@ export function HospitalsAdmin() {
       <section className="request-section">
         <div className="request-section-heading">
           <div>
-            <p>Hospitais cadastrados</p>
+            <p>Hospitais Cadastrados</p>
             <h2>Lista</h2>
           </div>
           <input className="admin-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar hospital..." />

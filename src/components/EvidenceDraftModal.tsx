@@ -130,8 +130,8 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
       <section className="evidence-modal" role="dialog" aria-modal="true" aria-labelledby="evidence-title" onMouseDown={(event) => event.stopPropagation()}>
         <header>
           <div>
-            <p className="eyebrow">Evidências da rota</p>
-            <h2 id="evidence-title">{task.type === 'delivery' ? 'Fotos da entrega' : 'Fotos da retirada'}</h2>
+            <p className="eyebrow">Evidências da Rota</p>
+            <h2 id="evidence-title">{task.type === 'delivery' ? 'Fotos da Entrega' : 'Fotos da Retirada'}</h2>
             <span>#{String(request.code).padStart(4, '0')} · {request.hospital}</span>
           </div>
           <button className="icon-button" type="button" onClick={closeSafely} aria-label="Fechar evidências" disabled={busy}>
@@ -148,7 +148,7 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
         {task.type === 'delivery' && (
           <section className="delivery-receipt-fields" aria-labelledby="delivery-receipt-title">
             <div>
-              <h3 id="delivery-receipt-title">Recebimento no hospital</h3>
+              <h3 id="delivery-receipt-title">Recebimento no Hospital</h3>
               <p>Registre quem recebeu cada grupo de materiais.</p>
             </div>
             <div className="delivery-receipt-grid">

@@ -238,7 +238,7 @@ function App() {
       <main className="auth-shell">
         <div className="access-state">
           <ShieldAlert size={34} />
-          <h1>Não foi possível carregar seu perfil</h1>
+          <h1>Não Foi Possível Carregar Seu Perfil</h1>
           <p>{profileError || 'Tente entrar novamente.'}</p>
           <button type="button" onClick={signOut}>Sair</button>
         </div>
@@ -251,7 +251,7 @@ function App() {
       <main className="auth-shell">
         <div className="access-state">
           <ShieldAlert size={34} />
-          <h1>Acesso aguardando liberação</h1>
+          <h1>Acesso Aguardando Liberação</h1>
           <p>Seu cadastro foi criado, mas um administrador ainda precisa definir sua função.</p>
           <button type="button" onClick={signOut}>Sair</button>
         </div>

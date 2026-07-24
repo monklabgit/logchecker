@@ -117,7 +117,7 @@ export function KitControlModal({ request, onClose, onChanged, initialDispatchOp
         <header>
           <div>
             <p className="eyebrow">Controle de Kits</p>
-            <h2 id="kit-control-title">Fotos da conferência</h2>
+            <h2 id="kit-control-title">Fotos da Conferência</h2>
             <span>#{String(request.code).padStart(4, '0')} · {request.hospital}</span>
           </div>
           <button className="icon-button" type="button" onClick={closeSafely} aria-label="Fechar Controle de Kits" disabled={busy}>

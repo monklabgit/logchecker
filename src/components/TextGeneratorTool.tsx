@@ -624,7 +624,7 @@ export function TextGeneratorTool() {
       <div className="workspace">
         <div className="editor-stack">
           <section className="panel">
-            <div className="flow-switch" role="group" aria-label="Tipo de movimentacao">
+            <div className="flow-switch" role="group" aria-label="Tipo de movimentação">
               {(['ENTRADA', 'RETIRADA'] as FlowType[]).map((option) => (
                 <button className={flow === option ? 'active' : ''} key={option} type="button" onClick={() => setFlow(option)}>
                   {option}
@@ -704,11 +704,11 @@ export function TextGeneratorTool() {
             {flow === 'ENTRADA' && (
               <>
                 <label>
-                  <span>Recebido CME</span>
+                  <span>Recebido no CME</span>
                   <input value={form.receivedCme} onChange={(event) => updateForm('receivedCme', event.target.value)} placeholder="Nome" />
                 </label>
                 <label>
-                  <span>Recebido OPME</span>
+                  <span>Recebido no OPME</span>
                   <input value={form.receivedOpme} onChange={(event) => updateForm('receivedOpme', event.target.value)} placeholder="Nome" />
                 </label>
               </>

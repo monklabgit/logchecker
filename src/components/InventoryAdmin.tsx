@@ -299,7 +299,7 @@ export function InventoryAdmin() {
     <section className="admin-view inventory-view">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Controle operacional</p>
+          <p className="eyebrow">Controle Operacional</p>
           <h1>Estoque</h1>
           <span>Cadastre materiais, acompanhe localização e importe listas em massa.</span>
         </div>
@@ -320,8 +320,8 @@ export function InventoryAdmin() {
       <section className="request-section">
         <div className="request-section-heading">
           <div>
-            <p>Novo material</p>
-            <h2>Cadastro rápido</h2>
+            <p>Novo Material</p>
+            <h2>Cadastro Rápido</h2>
           </div>
         </div>
 
@@ -369,8 +369,8 @@ export function InventoryAdmin() {
       <section className="request-section">
         <div className="request-section-heading">
           <div>
-            <p>Importação em massa</p>
-            <h2>Enviar lista</h2>
+            <p>Importação em Massa</p>
+            <h2>Enviar Lista</h2>
           </div>
           <label className="inventory-import-button">
             <FileUp size={17} />
@@ -419,7 +419,7 @@ export function InventoryAdmin() {
       <section className="request-section">
         <div className="request-section-heading inventory-list-heading">
           <div>
-            <p>Materiais cadastrados</p>
+            <p>Materiais Cadastrados</p>
             <h2>Lista</h2>
           </div>
           <div className="inventory-filters">
@@ -428,12 +428,12 @@ export function InventoryAdmin() {
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar material, KIT ou CJK..." />
             </label>
             <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as 'all' | InventoryCategory)}>
-              <option value="all">Todas categorias</option>
+              <option value="all">Todas as categorias</option>
               <option value="instrumental">Instrumental</option>
               <option value="opme">OPME</option>
             </select>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | InventoryStatus)}>
-              <option value="all">Todos status</option>
+              <option value="all">Todos os status</option>
               {(Object.keys(statusLabels) as InventoryStatus[]).map((status) => (
                 <option value={status} key={status}>
                   {statusLabels[status]}

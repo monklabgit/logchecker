@@ -160,7 +160,7 @@ export function UsersAdmin() {
       <header className="page-heading">
         <div>
           <p className="eyebrow">Administração</p>
-          <h1>Usuários e acessos</h1>
+          <h1>Usuários e Acessos</h1>
           <span>Defina funções, libere cadastros e ajuste o que cada tipo de usuário pode acessar.</span>
         </div>
       </header>
@@ -188,7 +188,7 @@ export function UsersAdmin() {
         <section className="request-section">
           <div className="request-section-heading">
             <div>
-              <p>Usuários cadastrados</p>
+              <p>Usuários Cadastrados</p>
               <h2>Funções</h2>
             </div>
             <input className="admin-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar usuário..." />

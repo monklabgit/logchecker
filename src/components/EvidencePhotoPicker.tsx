@@ -198,7 +198,7 @@ export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel =
             <section className="camera-panel" role="dialog" aria-modal="true" aria-labelledby="camera-title">
               <header className="camera-panel-header">
                 <div>
-                  <strong id="camera-title">Capturar foto</strong>
+                  <strong id="camera-title">Capturar Foto</strong>
                   <span>Enquadre o material antes de fotografar.</span>
                 </div>
                 <button className="icon-button" type="button" onClick={() => setCameraOpen(false)} aria-label="Fechar câmera">

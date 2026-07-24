@@ -542,8 +542,8 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
       <section className="request-section">
         <div className="request-section-heading overview-heading">
           <div>
-            <p>Controle operacional</p>
-            <h2>Lista de solicitações</h2>
+            <p>Controle Operacional</p>
+            <h2>Lista de Solicitações</h2>
           </div>
           <div className="overview-filters">
             {access.create_requests && (
@@ -563,7 +563,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
               <option value="all">Todos</option>
             </select>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | RequestStatus)} aria-label="Filtrar status">
-              <option value="all">Todos status</option>
+              <option value="all">Todos os status</option>
               {(Object.keys(statusLabels) as RequestStatus[]).map((status) => (
                 <option value={status} key={status}>
                   {statusLabels[status]}
@@ -694,7 +694,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
           <section className="action-modal" role="dialog" aria-modal="true" aria-labelledby="assign-driver-title">
             <header>
               <div>
-                <p className="eyebrow">Designar motorista</p>
+                <p className="eyebrow">Designar Motorista</p>
                 <h2 id="assign-driver-title">#{String(assigningRequest.code).padStart(4, '0')} - {assigningRequest.hospital}</h2>
                 <span>{assigningTask.type === 'delivery' ? 'Entrega' : 'Retirada'}</span>
               </div>
@@ -735,7 +735,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
           <section className="action-modal" role="dialog" aria-modal="true" aria-labelledby="manual-status-title">
             <header>
               <div>
-                <p className="eyebrow">Ajuste temporário</p>
+                <p className="eyebrow">Ajuste Temporário</p>
                 <h2 id="manual-status-title">#{String(statusRequestTarget.code).padStart(4, '0')} - {statusRequestTarget.hospital}</h2>
                 <span>Status atual: {statusLabels[statusRequestTarget.status]}</span>
               </div>
@@ -793,7 +793,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
           <section className="action-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-request-title">
             <header>
               <div>
-                <p className="eyebrow">Ação da solicitação</p>
+                <p className="eyebrow">Ação da Solicitação</p>
                 <h2 id="delete-request-title">#{String(deleteRequestTarget.code).padStart(4, '0')} - {deleteRequestTarget.hospital}</h2>
                 <span>Escolha se deseja apenas cancelar ou remover definitivamente.</span>
               </div>
@@ -826,7 +826,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
           <section className="edit-request-modal" role="dialog" aria-modal="true" aria-labelledby="edit-request-title" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <p className="eyebrow">Editar solicitação</p>
+                <p className="eyebrow">Editar Solicitação</p>
                 <h2 id="edit-request-title">#{String(editingRequest.code).padStart(4, '0')}</h2>
               </div>
               <button className="icon-button" type="button" onClick={() => setEditingRequest(null)} aria-label="Fechar edição">
@@ -901,7 +901,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                 <div className="request-section-heading">
                   <div>
                     <p>Materiais</p>
-                    <h2>Itens da solicitação</h2>
+                    <h2>Itens da Solicitação</h2>
                   </div>
                   <button type="button" onClick={() => setEditItems((current) => [...current, makeEmptyItem()])}>
                     Adicionar item

@@ -44,12 +44,12 @@ type FlowColumn = {
 };
 
 const operationalColumns: FlowColumn[] = [
-  { key: 'ready_delivery', statuses: ['ready_delivery'], label: 'Disponível para entrega', tone: 'blue', icon: Box },
-  { key: 'delivery_in_route', statuses: ['delivery_in_route'], label: 'Em rota de entrega', tone: 'amber', icon: Truck },
+  { key: 'ready_delivery', statuses: ['ready_delivery'], label: 'Disponível para Entrega', tone: 'blue', icon: Box },
+  { key: 'delivery_in_route', statuses: ['delivery_in_route'], label: 'Em Rota de Entrega', tone: 'amber', icon: Truck },
   { key: 'delivered', statuses: ['delivered'], label: 'Entregue', tone: 'green', icon: CheckCircle2 },
-  { key: 'ready_pickup', statuses: ['ready_pickup'], label: 'Disponível para retirada', tone: 'purple', icon: PackageCheck },
-  { key: 'pickup_in_route', statuses: ['pickup_in_route'], label: 'Em rota de retirada', tone: 'amber', icon: Truck },
-  { key: 'returned_stock', statuses: ['returned_stock'], label: 'Retornado ao estoque', tone: 'slate', icon: PackageCheck },
+  { key: 'ready_pickup', statuses: ['ready_pickup'], label: 'Disponível para Retirada', tone: 'purple', icon: PackageCheck },
+  { key: 'pickup_in_route', statuses: ['pickup_in_route'], label: 'Em Rota de Retirada', tone: 'amber', icon: Truck },
+  { key: 'returned_stock', statuses: ['returned_stock'], label: 'Retornado ao Estoque', tone: 'slate', icon: PackageCheck },
 ];
 
 const instrumentatorStatusLabels: Record<RequestStatus, string> = {
@@ -255,7 +255,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       return [
         {
           key: 'instrumentator-upcoming',
-          label: 'Próximas cirurgias',
+          label: 'Próximas Cirurgias',
           tone: 'blue',
           icon: CalendarDays,
           statuses: ['ready_delivery', 'delivery_in_route', 'delivered'],
@@ -263,7 +263,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
         },
         {
           key: 'instrumentator-completed',
-          label: 'Concluídas hoje',
+          label: 'Concluídas Hoje',
           tone: 'green',
           icon: CheckCircle2,
           statuses: [],
@@ -286,7 +286,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
       return [
         {
           key: 'driver-upcoming',
-          label: driverView === 'delivery' ? 'Próximas entregas' : 'Próximas retiradas',
+          label: driverView === 'delivery' ? 'Próximas Entregas' : 'Próximas Retiradas',
           tone: driverView === 'delivery' ? 'blue' : 'purple',
           icon: driverView === 'delivery' ? Box : PackageCheck,
           statuses: [],
@@ -296,7 +296,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
         },
         {
           key: 'driver-in-route',
-          label: 'Em rota',
+          label: 'Em Rota',
           tone: 'amber',
           icon: Truck,
           statuses: [],
@@ -306,7 +306,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
         },
         {
           key: 'driver-completed',
-          label: 'Concluídas hoje',
+          label: 'Concluídas Hoje',
           tone: 'green',
           icon: CheckCircle2,
           statuses: [],
@@ -400,8 +400,8 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     <section className="operations-view">
       <div className="operations-heading">
         <div>
-          <p className="eyebrow">{profile.role === 'driver' ? 'Operação logística' : profile.role === 'instrumentator' ? 'Cirurgias designadas' : 'Acompanhamento em tempo real'}</p>
-          <h1>{profile.role === 'driver' ? 'Minhas rotas' : profile.role === 'instrumentator' ? 'Minhas cirurgias' : 'Fluxo de materiais'}</h1>
+          <p className="eyebrow">{profile.role === 'driver' ? 'Operação Logística' : profile.role === 'instrumentator' ? 'Cirurgias Designadas' : 'Acompanhamento em Tempo Real'}</p>
+          <h1>{profile.role === 'driver' ? 'Minhas Rotas' : profile.role === 'instrumentator' ? 'Minhas Cirurgias' : 'Fluxo de Materiais'}</h1>
         </div>
         <button className="secondary-button" type="button" onClick={() => void loadRequests(true)} disabled={refreshing}>
           <RefreshCw className={refreshing ? 'spin' : ''} size={17} />

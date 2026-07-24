@@ -464,8 +464,8 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
     <section className="new-request-view">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Operação logística</p>
-          <h1>Nova solicitação</h1>
+          <p className="eyebrow">Operação Logística</p>
+          <h1>Nova Solicitação</h1>
           <span>Cadastre o material que será enviado ao hospital.</span>
         </div>
       </header>
@@ -473,8 +473,8 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
       <section className="request-form-card">
         <div className="request-section-heading">
           <div>
-            <p>Informações principais</p>
-            <h2>Cirurgia e destino</h2>
+            <p>Informações Principais</p>
+            <h2>Cirurgia e Destino</h2>
           </div>
         </div>
         <div className="operational-form-grid">
@@ -571,8 +571,8 @@ export function NewRequestForm({ onSaved, modal = false, onClose }: NewRequestFo
       <section className="new-request-modal" role="dialog" aria-modal="true" aria-labelledby="new-request-title" onMouseDown={(event) => event.stopPropagation()}>
         <header>
           <div>
-            <p className="eyebrow">Operação logística</p>
-            <h2 id="new-request-title">Nova solicitação</h2>
+            <p className="eyebrow">Operação Logística</p>
+            <h2 id="new-request-title">Nova Solicitação</h2>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar nova solicitação" disabled={saving}>
             <X size={20} />

@@ -81,7 +81,7 @@ export function AuthScreen() {
             <LockKeyhole size={22} />
           </span>
           <div>
-            <h1>{mode === 'login' ? 'Acessar sistema' : 'Criar cadastro'}</h1>
+            <h1>{mode === 'login' ? 'Acessar Sistema' : 'Criar Cadastro'}</h1>
             <p>{mode === 'login' ? 'Entre com seu e-mail e senha.' : 'Use seus dados profissionais para criar o acesso.'}</p>
           </div>
         </div>

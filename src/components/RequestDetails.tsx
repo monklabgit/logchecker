@@ -250,7 +250,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
 
         <div className="details-body">
           <section className="details-summary">
-            <h3>Dados da solicitação</h3>
+            <h3>Dados da Solicitação</h3>
             <dl className="compact-details-list">
               <div>
                 <dt><UserRound size={15} /> Paciente</dt>
@@ -337,7 +337,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
 
           {completedDelivery && (completedDelivery.delivery_received_cme || completedDelivery.delivery_received_opme || completedDelivery.delivery_observation) && (
             <section className="details-delivery-receipt">
-              <h3><PackageOpen size={18} /> Dados da entrega</h3>
+              <h3><PackageOpen size={18} /> Dados da Entrega</h3>
               <dl className="compact-details-list">
                 <div>
                   <dt>Recebido no CME</dt>
@@ -359,7 +359,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
 
           {request.release_observation && (
             <section className="details-delivery-receipt">
-              <h3><PackageOpen size={18} /> Dados da liberação</h3>
+              <h3><PackageOpen size={18} /> Dados da Liberação</h3>
               <dl className="compact-details-list">
                 <div>
                   <dt>Observação da liberação</dt>
@@ -406,7 +406,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
 
           {access.view_evidence && signedPhotos.length > 0 && (
             <section className="details-evidence">
-              <h3><ImageIcon size={18} /> Evidências fotográficas</h3>
+              <h3><ImageIcon size={18} /> Evidências Fotográficas</h3>
               <div className="evidence-grid">
                 {signedPhotos.map((photo) => (
                   <article className="evidence-grid-item" key={photo.id}>
@@ -493,7 +493,7 @@ export function RequestDetails({ access, request, onClose, onChanged }: RequestD
             <section className="action-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-evidence-title">
               <header>
                 <div>
-                  <p className="eyebrow">Excluir evidência</p>
+                  <p className="eyebrow">Excluir Evidência</p>
                   <h2 id="delete-evidence-title">Foto de {photoTypeLabels[evidenceDeleteTarget.photo_type]}</h2>
                   <span>Esta ação será registrada no histórico da solicitação.</span>
                 </div>

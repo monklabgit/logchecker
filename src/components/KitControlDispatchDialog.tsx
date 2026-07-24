@@ -28,19 +28,19 @@ export function KitControlDispatchDialog({
   const options: Array<{ mode: KitControlDispatchMode; title: string; description: string; count: number }> = [
     {
       mode: 'pending',
-      title: 'Enviar pendentes',
+      title: 'Enviar Pendentes',
       description: 'Inclui todas as fotos que nunca foram enviadas, mesmo as salvas anteriormente.',
       count: pendingCount,
     },
     {
       mode: 'current',
-      title: 'Somente adicionadas agora',
+      title: 'Somente Adicionadas Agora',
       description: 'Envia apenas as fotos salvas nesta etapa.',
       count: currentCount,
     },
     {
       mode: 'all',
-      title: 'Enviar todas',
+      title: 'Enviar Todas',
       description: 'Reenvia o conjunto completo do Controle de Kits.',
       count: totalCount,
     },
@@ -53,7 +53,7 @@ export function KitControlDispatchDialog({
           <span className="dispatch-confirm-icon" aria-hidden="true"><MessageCircle size={22} /></span>
           <div>
             <p className="eyebrow">WhatsApp</p>
-            <h2 id="kit-dispatch-title">O que deseja enviar para Conferência de Kits?</h2>
+            <h2 id="kit-dispatch-title">Envio para Conferência de Kits</h2>
             <p>As fotos já estão salvas. Escolha quais evidências devem seguir para o grupo.</p>
           </div>
           <button className="icon-button" type="button" onClick={onCancel} aria-label="Não enviar agora">
