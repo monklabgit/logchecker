@@ -116,11 +116,7 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
 
   const requestCompletion = () => {
     if (!validateCompletion()) return;
-    if (task.type === 'delivery') {
-      setDispatchConfirmationOpen(true);
-      return;
-    }
-    void completeTask(true);
+    setDispatchConfirmationOpen(true);
   };
 
   const busy = evidence.uploading || completing;
@@ -206,7 +202,7 @@ export function EvidenceDraftModal({ request, task, onClose, onChanged }: Eviden
 
         {dispatchConfirmationOpen && (
           <WhatsAppDispatchDialog
-            actionLabel="A entrega"
+            actionLabel={task.type === 'delivery' ? 'A entrega' : 'A retirada'}
             onCancel={() => setDispatchConfirmationOpen(false)}
             onConfirm={(sendMessage) => void completeTask(sendMessage)}
           />
