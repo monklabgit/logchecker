@@ -16,6 +16,7 @@ export function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -35,11 +36,16 @@ export function AuthScreen() {
 
     try {
       if (mode === 'signup') {
+        if (!name.trim()) throw new Error('Informe seu nome.');
+        if (phone.replace(/\D/g, '').length < 10) {
+          throw new Error('Informe um número de WhatsApp válido, incluindo o DDD.');
+        }
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            data: { full_name: name.trim() },
+            data: { full_name: name.trim(), phone: phone.trim() },
           },
         });
 
@@ -94,6 +100,22 @@ export function AuthScreen() {
             <label>
               <span>Nome</span>
               <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required />
+            </label>
+          )}
+
+          {mode === 'signup' && (
+            <label>
+              <span>WhatsApp</span>
+              <input
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+55 21 99999-9999"
+                maxLength={25}
+                required
+              />
             </label>
           )}
 

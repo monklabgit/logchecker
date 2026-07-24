@@ -3075,6 +3075,7 @@ select:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  gap: 14px;
 }
 
 .settings-page-section {
@@ -3083,6 +3084,60 @@ select:focus {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 12px 30px rgba(8, 42, 89, 0.08);
+}
+
+.settings-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-profile-grid > label:last-child {
+  grid-column: 1 / -1;
+}
+
+.settings-profile-grid label > small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.settings-phone-input {
+  position: relative;
+}
+
+.settings-phone-input > svg {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  color: var(--teal-dark);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.settings-phone-input input {
+  padding-left: 38px;
+}
+
+.save-profile-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.save-profile-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
 }
 
 .dispatch-confirm-modal {
@@ -4393,8 +4448,17 @@ select:focus {
       max(10px, env(safe-area-inset-bottom));
   }
 
-  .settings-page-content {
+  .settings-page-content,
+  .settings-profile-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settings-profile-grid > label:last-child {
+    grid-column: auto;
+  }
+
+  .save-profile-button {
+    width: 100%;
   }
 
   .whatsapp-groups-grid,

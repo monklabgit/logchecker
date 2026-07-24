@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { LoaderCircle, MessageCircle, PlugZap, QrCode, Save, Unplug, UsersRound } from 'lucide-react';
+import { LoaderCircle, MessageCircle, Phone, PlugZap, QrCode, Save, Unplug, UserRound, UsersRound } from 'lucide-react';
+import { supabase } from '../supabase';
 import type { Profile, UserWhatsappConnection } from '../types';
 
 type UserSettingsPageProps = {
   profile: Profile;
   session: Session;
+  canManageWhatsapp: boolean;
 };
 
 type WhatsappResponse = {
@@ -28,7 +30,12 @@ const stateLabels: Record<string, string> = {
   not_configured: 'Não configurado',
 };
 
-export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
+export function UserSettingsPage({ profile, session, canManageWhatsapp }: UserSettingsPageProps) {
+  const [fullName, setFullName] = useState(profile.full_name || '');
+  const [phone, setPhone] = useState(profile.phone ? `+${profile.phone}` : '');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileNotice, setProfileNotice] = useState('');
   const [connection, setConnection] = useState<UserWhatsappConnection | null>(null);
   const [qrcode, setQrcode] = useState('');
   const [loading, setLoading] = useState(true);
@@ -86,8 +93,51 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
   };
 
   useEffect(() => {
-    void loadStatus();
-  }, []);
+    setFullName(profile.full_name || '');
+    setPhone(profile.phone ? `+${profile.phone}` : '');
+  }, [profile.full_name, profile.phone]);
+
+  useEffect(() => {
+    if (canManageWhatsapp) void loadStatus();
+    else setLoading(false);
+  }, [canManageWhatsapp]);
+
+  const saveProfile = async () => {
+    const normalizedName = fullName.trim();
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!normalizedName) {
+      setProfileError('Informe seu nome.');
+      return;
+    }
+    if (phoneDigits.length < 10) {
+      setProfileError('Informe um número de WhatsApp válido, incluindo o DDD.');
+      return;
+    }
+
+    setSavingProfile(true);
+    setProfileError('');
+    setProfileNotice('');
+
+    const { data, error: updateError } = await supabase.rpc('update_own_profile', {
+      target_full_name: normalizedName,
+      target_phone: phone,
+    });
+
+    if (updateError) {
+      setProfileError(updateError.message.includes('Invalid WhatsApp')
+        ? 'Informe um número de WhatsApp válido, incluindo o DDD.'
+        : updateError.message);
+    } else {
+      const updatedProfile = (data || [])[0] as Pick<Profile, 'full_name' | 'phone'> | undefined;
+      if (updatedProfile) {
+        setFullName(updatedProfile.full_name);
+        setPhone(updatedProfile.phone ? `+${updatedProfile.phone}` : '');
+      }
+      setProfileNotice('Dados pessoais atualizados.');
+    }
+
+    setSavingProfile(false);
+  };
 
   const connectWhatsapp = async () => {
     setActing('connect');
@@ -159,6 +209,58 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
       </header>
 
       <div className="settings-page-content">
+        <section className="settings-section settings-page-section">
+          <div className="settings-section-title">
+            <UserRound size={20} />
+            <div>
+              <h3>Dados pessoais</h3>
+              <p>Atualize seu nome e o número que será usado nas futuras rotinas de WhatsApp.</p>
+            </div>
+          </div>
+
+          <div className="settings-profile-grid">
+            <label>
+              <span>Nome</span>
+              <input
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                autoComplete="name"
+                maxLength={120}
+                disabled={savingProfile}
+              />
+            </label>
+            <label>
+              <span>WhatsApp</span>
+              <div className="settings-phone-input">
+                <Phone size={17} />
+                <input
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="+55 21 99999-9999"
+                  disabled={savingProfile}
+                />
+              </div>
+              <small>Informe o DDD. O código do Brasil (+55) será incluído automaticamente se necessário.</small>
+            </label>
+            <label>
+              <span>E-mail</span>
+              <input value={session.user.email || ''} type="email" disabled />
+            </label>
+          </div>
+
+          {profileError && <p className="auth-message error">{profileError}</p>}
+          {profileNotice && <p className="auth-message notice">{profileNotice}</p>}
+
+          <button className="save-profile-button" type="button" onClick={() => void saveProfile()} disabled={savingProfile}>
+            {savingProfile ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+            Salvar dados pessoais
+          </button>
+        </section>
+
+        {canManageWhatsapp && (
         <section className="settings-section settings-page-section">
             <div className="settings-section-title">
               <MessageCircle size={20} />
@@ -252,6 +354,7 @@ export function UserSettingsPage({ profile, session }: UserSettingsPageProps) {
             {error && <p className="auth-message error">{error}</p>}
             {notice && <p className="auth-message notice">{notice}</p>}
         </section>
+        )}
       </div>
     </section>
   );

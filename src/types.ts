@@ -18,6 +18,7 @@ export type InventoryStatus = 'in_stock' | 'in_route' | 'hospital' | 'consigned'
 export type Profile = {
   id: string;
   full_name: string;
+  phone: string;
   role: UserRole;
   active: boolean;
 };

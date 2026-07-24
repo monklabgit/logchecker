@@ -37,7 +37,7 @@ export function UsersAdmin() {
     if (!query) return profiles;
 
     return profiles.filter((profile) =>
-      [profile.full_name, profile.email, ROLE_LABELS[profile.role]]
+      [profile.full_name, profile.email, profile.phone, ROLE_LABELS[profile.role]]
         .join(' ')
         .toLocaleLowerCase('pt-BR')
         .includes(query)
@@ -81,7 +81,7 @@ export function UsersAdmin() {
       .from('profiles')
       .update(changes)
       .eq('id', profile.id)
-      .select('id, full_name, role, active, created_at, updated_at')
+      .select('id, full_name, phone, role, active, created_at, updated_at')
       .single();
 
     if (updateError) {
@@ -204,6 +204,7 @@ export function UsersAdmin() {
                   <div>
                     <strong>{profile.full_name || 'Usuário sem nome'}</strong>
                     <small>{profile.email}</small>
+                    {profile.phone && <small>WhatsApp: +{profile.phone}</small>}
                   </div>
                 </div>
 

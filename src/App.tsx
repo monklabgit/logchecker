@@ -36,7 +36,7 @@ function App() {
     const fetchProfile = async (userId: string) => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role, active')
+        .select('id, full_name, phone, role, active')
         .eq('id', userId)
         .single();
 
@@ -185,7 +185,7 @@ function App() {
     const canInventory = access.manage_inventory;
     const canHospitals = access.manage_hospitals;
     const canUsers = profile.role === 'admin' || access.manage_users;
-    const canSettings = access.manage_whatsapp;
+    const canSettings = true;
 
     const allowed =
       (view === 'flow' && canFlow) ||
@@ -338,19 +338,17 @@ function App() {
                   <small>{session.user.email}</small>
                 </div>
               </div>
-              {canManageWhatsapp && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setView('settings');
-                    setAccountMenuOpen(false);
-                  }}
-                >
-                  <Settings size={17} />
-                  <span>Configurações</span>
-                </button>
-              )}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setView('settings');
+                  setAccountMenuOpen(false);
+                }}
+              >
+                <Settings size={17} />
+                <span>Configurações</span>
+              </button>
               <button type="button" role="menuitem" onClick={updateApplication} disabled={appUpdating}>
                 <RefreshCw className={appUpdating ? 'spin' : undefined} size={17} />
                 <span>{appUpdating ? 'Atualizando aplicativo...' : 'Atualizar aplicativo'}</span>
@@ -397,7 +395,7 @@ function App() {
       {view === 'inventory' && <InventoryAdmin />}
       {view === 'hospitals' && <HospitalsAdmin />}
       {view === 'users' && <UsersAdmin />}
-      {view === 'settings' && <UserSettingsPage profile={profile} session={session} />}
+      {view === 'settings' && <UserSettingsPage profile={profile} session={session} canManageWhatsapp={canManageWhatsapp} />}
     </main>
   );
 }
