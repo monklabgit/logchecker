@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
-import type { Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
+import type { Profile, RequestStatus, SurgeryRequest, TransportTask, TransportType } from '../types';
 import { EvidenceDraftModal } from './EvidenceDraftModal';
 import { RequestDetails } from './RequestDetails';
 
@@ -31,14 +31,36 @@ type OperationsDashboardProps = {
   refreshKey?: number;
 };
 
-const columns: Array<{ status: RequestStatus; label: string; tone: string; icon: typeof Box }> = [
-  { status: 'ready_delivery', label: 'Disponível para entrega', tone: 'blue', icon: Box },
-  { status: 'delivery_in_route', label: 'Em rota de entrega', tone: 'amber', icon: Truck },
-  { status: 'delivered', label: 'Entregue', tone: 'green', icon: CheckCircle2 },
-  { status: 'ready_pickup', label: 'Disponível para retirada', tone: 'purple', icon: PackageCheck },
-  { status: 'pickup_in_route', label: 'Em rota de retirada', tone: 'amber', icon: Truck },
-  { status: 'returned_stock', label: 'Retornado ao estoque', tone: 'slate', icon: PackageCheck },
+type FlowColumn = {
+  key: string;
+  label: string;
+  tone: string;
+  icon: typeof Box;
+  statuses: RequestStatus[];
+  taskType?: TransportType;
+  completed?: boolean;
+  matches?: (request: SurgeryRequest) => boolean;
+  statusLabel?: (request: SurgeryRequest, task: TransportTask | null) => string;
+};
+
+const operationalColumns: FlowColumn[] = [
+  { key: 'ready_delivery', statuses: ['ready_delivery'], label: 'Disponível para entrega', tone: 'blue', icon: Box },
+  { key: 'delivery_in_route', statuses: ['delivery_in_route'], label: 'Em rota de entrega', tone: 'amber', icon: Truck },
+  { key: 'delivered', statuses: ['delivered'], label: 'Entregue', tone: 'green', icon: CheckCircle2 },
+  { key: 'ready_pickup', statuses: ['ready_pickup'], label: 'Disponível para retirada', tone: 'purple', icon: PackageCheck },
+  { key: 'pickup_in_route', statuses: ['pickup_in_route'], label: 'Em rota de retirada', tone: 'amber', icon: Truck },
+  { key: 'returned_stock', statuses: ['returned_stock'], label: 'Retornado ao estoque', tone: 'slate', icon: PackageCheck },
 ];
+
+const instrumentatorStatusLabels: Record<RequestStatus, string> = {
+  ready_delivery: 'Material separado',
+  delivery_in_route: 'Em rota para o hospital',
+  delivered: 'Material entregue',
+  ready_pickup: 'Material liberado',
+  pickup_in_route: 'Em rota para o estoque',
+  returned_stock: 'Retornado ao estoque',
+  cancelled: 'Cancelada',
+};
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
 const compactDateFormatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -54,6 +76,26 @@ const getOpenTask = (request: SurgeryRequest) =>
   request.transport_tasks
     .filter((task) => !['completed', 'cancelled'].includes(task.status))
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] || null;
+
+const getTaskByType = (request: SurgeryRequest, type: TransportType) =>
+  request.transport_tasks
+    .filter((task) => task.type === type && task.status !== 'cancelled')
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] || null;
+
+const scheduleTimestamp = (request: SurgeryRequest) => {
+  if (!request.surgery_date) return Number.MAX_SAFE_INTEGER;
+  const time = request.surgery_time?.slice(0, 5) || '23:59';
+  const timestamp = new Date(`${request.surgery_date}T${time}:00`).getTime();
+  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+};
+
+const driverTaskStatusLabel = (type: TransportType, task: TransportTask | null) => {
+  if (!task || task.status === 'available') return type === 'delivery' ? 'Material separado' : 'Material liberado';
+  if (task.status === 'assigned') return type === 'delivery' ? 'Entrega designada' : 'Retirada designada';
+  if (task.status === 'in_route') return 'Em rota';
+  if (task.status === 'completed') return type === 'delivery' ? 'Entrega concluída' : 'Retirada concluída';
+  return '';
+};
 
 const actionForTask = (task: TransportTask | null, profile: Profile, access: RoleAccess) => {
   if (!task) return null;
@@ -107,8 +149,9 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
   const [actingTaskId, setActingTaskId] = useState('');
   const [photoPrompt, setPhotoPrompt] = useState<{ request: SurgeryRequest; task: TransportTask } | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const [collapsedColumns, setCollapsedColumns] = useState<Set<RequestStatus>>(
-    () => new Set(columns.map((column) => column.status))
+  const [driverView, setDriverView] = useState<TransportType>('delivery');
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(
+    () => new Set([...operationalColumns.map((column) => column.key), 'driver-completed', 'instrumentator-completed'])
   );
   const [navigationTarget, setNavigationTarget] = useState<{ title: string; query: string } | null>(null);
 
@@ -145,6 +188,11 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
           setCollapsedColumns((currentColumns) => {
             const nextColumns = new Set(currentColumns);
             nextColumns.delete(highlightedRequest.status);
+            nextColumns.delete('instrumentator-upcoming');
+            nextColumns.delete('instrumentator-completed');
+            nextColumns.delete('driver-upcoming');
+            nextColumns.delete('driver-in-route');
+            nextColumns.delete('driver-completed');
             return nextColumns;
           });
           setExpandedCards((currentCards) => {
@@ -190,12 +238,94 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     });
   }, [highlightedRequestId, requests]);
 
+  const displayColumns = useMemo<FlowColumn[]>(() => {
+    if (profile.role === 'instrumentator') {
+      return [
+        {
+          key: 'instrumentator-upcoming',
+          label: 'Próximas cirurgias',
+          tone: 'blue',
+          icon: CalendarDays,
+          statuses: ['ready_delivery', 'delivery_in_route', 'delivered'],
+          statusLabel: (request) => instrumentatorStatusLabels[request.status],
+        },
+        {
+          key: 'instrumentator-completed',
+          label: 'Concluídas',
+          tone: 'green',
+          icon: CheckCircle2,
+          statuses: ['ready_pickup', 'pickup_in_route', 'returned_stock'],
+          completed: true,
+          statusLabel: (request) => instrumentatorStatusLabels[request.status],
+        },
+      ];
+    }
+
+    if (profile.role === 'driver') {
+      const taskMatches = (request: SurgeryRequest, statuses: TransportTask['status'][]) => {
+        const task = getTaskByType(request, driverView);
+        if (!task || !statuses.includes(task.status)) return false;
+        return task.status === 'available' || task.assigned_driver_id === profile.id;
+      };
+
+      return [
+        {
+          key: 'driver-upcoming',
+          label: driverView === 'delivery' ? 'Próximas entregas' : 'Próximas retiradas',
+          tone: driverView === 'delivery' ? 'blue' : 'purple',
+          icon: driverView === 'delivery' ? Box : PackageCheck,
+          statuses: [],
+          taskType: driverView,
+          matches: (request) => taskMatches(request, ['available', 'assigned']),
+          statusLabel: (_request, task) => driverTaskStatusLabel(driverView, task),
+        },
+        {
+          key: 'driver-in-route',
+          label: 'Em rota',
+          tone: 'amber',
+          icon: Truck,
+          statuses: [],
+          taskType: driverView,
+          matches: (request) => taskMatches(request, ['in_route']),
+          statusLabel: (_request, task) => driverTaskStatusLabel(driverView, task),
+        },
+        {
+          key: 'driver-completed',
+          label: 'Concluídas',
+          tone: 'green',
+          icon: CheckCircle2,
+          statuses: [],
+          taskType: driverView,
+          completed: true,
+          matches: (request) => taskMatches(request, ['completed']),
+          statusLabel: (_request, task) => driverTaskStatusLabel(driverView, task),
+        },
+      ];
+    }
+
+    return operationalColumns;
+  }, [driverView, profile.id, profile.role]);
+
   const groupedRequests = useMemo(
     () =>
       Object.fromEntries(
-        columns.map((column) => [column.status, requests.filter((request) => request.status === column.status)])
-      ) as Record<RequestStatus, SurgeryRequest[]>,
-    [requests]
+        displayColumns.map((column) => {
+          const matchingRequests = requests.filter((request) =>
+            column.matches ? column.matches(request) : column.statuses.includes(request.status)
+          );
+          if (profile.role === 'driver' || profile.role === 'instrumentator') {
+            matchingRequests.sort((a, b) => {
+              const aSchedule = scheduleTimestamp(a);
+              const bSchedule = scheduleTimestamp(b);
+              if (aSchedule === Number.MAX_SAFE_INTEGER) return bSchedule === Number.MAX_SAFE_INTEGER ? 0 : 1;
+              if (bSchedule === Number.MAX_SAFE_INTEGER) return -1;
+              return column.completed ? bSchedule - aSchedule : aSchedule - bSchedule;
+            });
+          }
+          return [column.key, matchingRequests];
+        })
+      ) as Record<string, SurgeryRequest[]>,
+    [displayColumns, profile.role, requests]
   );
 
   const runTaskAction = async (task: TransportTask, action: string) => {
@@ -230,7 +360,7 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     });
   };
 
-  const toggleColumn = (status: RequestStatus) => {
+  const toggleColumn = (status: string) => {
     setCollapsedColumns((current) => {
       const next = new Set(current);
       if (next.has(status)) next.delete(status);
@@ -252,8 +382,8 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
     <section className="operations-view">
       <div className="operations-heading">
         <div>
-          <p className="eyebrow">Acompanhamento em tempo real</p>
-          <h1>Fluxo de materiais</h1>
+          <p className="eyebrow">{profile.role === 'driver' ? 'Operação logística' : profile.role === 'instrumentator' ? 'Cirurgias designadas' : 'Acompanhamento em tempo real'}</p>
+          <h1>{profile.role === 'driver' ? 'Minhas rotas' : profile.role === 'instrumentator' ? 'Minhas cirurgias' : 'Fluxo de materiais'}</h1>
         </div>
         <button className="secondary-button" type="button" onClick={() => void loadRequests(true)} disabled={refreshing}>
           <RefreshCw className={refreshing ? 'spin' : ''} size={17} />
@@ -263,27 +393,40 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
 
       {error && <p className="auth-message error">{error}</p>}
 
-      <div className="kanban-board">
-        {columns.map((column) => {
+      {profile.role === 'driver' && (
+        <div className="role-flow-tabs" role="tablist" aria-label="Tipo de rota">
+          <button type="button" role="tab" aria-selected={driverView === 'delivery'} className={driverView === 'delivery' ? 'active' : ''} onClick={() => setDriverView('delivery')}>
+            <Box size={18} />
+            Entregas
+          </button>
+          <button type="button" role="tab" aria-selected={driverView === 'pickup'} className={driverView === 'pickup' ? 'active' : ''} onClick={() => setDriverView('pickup')}>
+            <PackageCheck size={18} />
+            Retiradas
+          </button>
+        </div>
+      )}
+
+      <div className={`kanban-board ${profile.role === 'driver' || profile.role === 'instrumentator' ? `role-flow-board role-${profile.role}` : ''}`}>
+        {displayColumns.map((column) => {
           const ColumnIcon = column.icon;
 
           return (
-            <section className={`kanban-column tone-${column.tone} ${collapsedColumns.has(column.status) ? 'mobile-collapsed' : ''}`} key={column.status}>
+            <section className={`kanban-column tone-${column.tone} ${collapsedColumns.has(column.key) ? 'mobile-collapsed' : ''}`} key={column.key}>
               <header>
-                <button type="button" onClick={() => toggleColumn(column.status)} aria-expanded={!collapsedColumns.has(column.status)}>
+                <button type="button" onClick={() => toggleColumn(column.key)} aria-expanded={!collapsedColumns.has(column.key)}>
                   <span className="status-icon" aria-hidden="true">
                     <ColumnIcon size={15} />
                   </span>
                   <h2>{column.label}</h2>
-                  <ChevronDown className={collapsedColumns.has(column.status) ? '' : 'expanded'} size={17} />
+                  <ChevronDown className={collapsedColumns.has(column.key) ? '' : 'expanded'} size={17} />
                 </button>
-                <strong>{groupedRequests[column.status].length}</strong>
+                <strong>{groupedRequests[column.key].length}</strong>
               </header>
 
               <div className="kanban-cards">
-                {groupedRequests[column.status].map((request) => {
+                {groupedRequests[column.key].map((request) => {
                   const schedule = requestSchedule(request);
-                  const task = getOpenTask(request);
+                  const task = column.taskType ? getTaskByType(request, column.taskType) : getOpenTask(request);
                   const action = actionForTask(task, profile, access);
                   const ActionIcon = action?.icon;
                   const routeQuery = routeQueryForTask(request, task);
@@ -321,7 +464,10 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                           </small>
                           <strong>{request.hospital}</strong>
                         </span>
-                        <ChevronDown className={expanded ? 'expanded' : ''} size={18} />
+                        <span className="operation-card-summary-side">
+                          {column.statusLabel && <small className="role-status-badge">{column.statusLabel(request, task)}</small>}
+                          <ChevronDown className={expanded ? 'expanded' : ''} size={18} />
+                        </span>
                       </button>
 
                       {expanded && (
@@ -419,10 +565,10 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
                   );
                 })}
 
-                {!groupedRequests[column.status].length && (
+                {!groupedRequests[column.key].length && (
                   <div className="empty-column">
                     <CheckCircle2 size={22} />
-                    <span>Nenhuma solicitação</span>
+                    <span>{profile.role === 'instrumentator' ? 'Nenhuma cirurgia' : profile.role === 'driver' ? 'Nenhuma rota' : 'Nenhuma solicitação'}</span>
                   </div>
                 )}
               </div>

@@ -1781,6 +1781,49 @@ select:focus {
   scrollbar-color: #c8d3e0 transparent;
 }
 
+.role-flow-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 430px);
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid #d9e3ee;
+  border-radius: 8px;
+  background: #eef3f8;
+}
+
+.role-flow-tabs button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #52647a;
+  font-weight: 800;
+}
+
+.role-flow-tabs button.active {
+  background: var(--navy);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(8, 42, 89, 0.16);
+}
+
+.role-flow-board {
+  overflow-x: visible;
+  padding-bottom: 0;
+}
+
+.role-flow-board.role-driver {
+  grid-template-columns: repeat(3, minmax(246px, 1fr));
+}
+
+.role-flow-board.role-instrumentator {
+  grid-template-columns: minmax(320px, 1.45fr) minmax(280px, 1fr);
+}
+
 .kanban-column {
   min-width: 246px;
   overflow: hidden;
@@ -1958,6 +2001,29 @@ select:focus {
 .operation-card-meta time {
   color: var(--muted);
   font-family: inherit;
+}
+
+.operation-card-summary-side {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.role-status-badge {
+  max-width: 150px;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--column-color) 24%, #d9e3ee);
+  border-radius: 999px;
+  background: var(--column-soft);
+  color: var(--column-color);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
 }
 
 .operation-card-summary svg {
@@ -4069,6 +4135,20 @@ select:focus {
     grid-template-columns: 1fr;
     overflow-x: visible;
     padding-bottom: 0;
+  }
+
+  .role-flow-board.role-driver,
+  .role-flow-board.role-instrumentator {
+    grid-template-columns: 1fr;
+  }
+
+  .role-flow-tabs {
+    width: 100%;
+  }
+
+  .role-status-badge {
+    max-width: 118px;
+    font-size: 9px;
   }
 
   .kanban-column {
