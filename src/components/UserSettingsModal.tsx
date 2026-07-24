@@ -307,6 +307,7 @@ export function UserSettingsPage({ profile, session, canManageWhatsapp }: UserSe
                   </div>
                 )}
 
+                {canEditGroups && (
                 <div className="whatsapp-group-settings">
                   <div className="whatsapp-group-settings-title">
                     <UsersRound size={18} />
@@ -320,34 +321,31 @@ export function UserSettingsPage({ profile, session, canManageWhatsapp }: UserSe
                       <h4>Logística</h4>
                       <label>
                         <span>Nome do grupo</span>
-                        <input value={logisticsGroupName} onChange={(event) => setLogisticsGroupName(event.target.value)} placeholder="Ex.: Marja Logística Rio" disabled={!canEditGroups || Boolean(acting)} />
+                        <input value={logisticsGroupName} onChange={(event) => setLogisticsGroupName(event.target.value)} placeholder="Ex.: Marja Logística Rio" disabled={Boolean(acting)} />
                       </label>
                       <label>
                         <span>ID do grupo</span>
-                        <input value={logisticsGroupJid} onChange={(event) => setLogisticsGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" disabled={!canEditGroups || Boolean(acting)} />
+                        <input value={logisticsGroupJid} onChange={(event) => setLogisticsGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" disabled={Boolean(acting)} />
                       </label>
                     </div>
                     <div className="whatsapp-group-fields">
                       <h4>Conferência de Kits</h4>
                       <label>
                         <span>Nome do grupo</span>
-                        <input value={kitControlGroupName} onChange={(event) => setKitControlGroupName(event.target.value)} placeholder="Ex.: Conferência de Kits" disabled={!canEditGroups || Boolean(acting)} />
+                        <input value={kitControlGroupName} onChange={(event) => setKitControlGroupName(event.target.value)} placeholder="Ex.: Conferência de Kits" disabled={Boolean(acting)} />
                       </label>
                       <label>
                         <span>ID do grupo</span>
-                        <input value={kitControlGroupJid} onChange={(event) => setKitControlGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" disabled={!canEditGroups || Boolean(acting)} />
+                        <input value={kitControlGroupJid} onChange={(event) => setKitControlGroupJid(event.target.value)} placeholder="120000000000000000@g.us" autoCapitalize="none" disabled={Boolean(acting)} />
                       </label>
                     </div>
                   </div>
-                  {canEditGroups ? (
-                    <button className="save-whatsapp-groups-button" type="button" onClick={() => void saveGroups()} disabled={Boolean(acting)}>
-                      {acting === 'save-groups' ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
-                      Salvar grupos para todos
-                    </button>
-                  ) : (
-                    <p className="whatsapp-groups-readonly">Somente administradores podem alterar estes grupos.</p>
-                  )}
+                  <button className="save-whatsapp-groups-button" type="button" onClick={() => void saveGroups()} disabled={Boolean(acting)}>
+                    {acting === 'save-groups' ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+                    Salvar grupos para todos
+                  </button>
                 </div>
+                )}
               </>
             )}
 
