@@ -89,6 +89,18 @@ const scheduleTimestamp = (request: SurgeryRequest) => {
   return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
 };
 
+const happenedToday = (value: string | null | undefined) => {
+  if (!value) return false;
+  const eventDate = new Date(value);
+  if (Number.isNaN(eventDate.getTime())) return false;
+  const today = new Date();
+  return (
+    eventDate.getFullYear() === today.getFullYear() &&
+    eventDate.getMonth() === today.getMonth() &&
+    eventDate.getDate() === today.getDate()
+  );
+};
+
 const driverTaskStatusLabel = (type: TransportType, task: TransportTask | null) => {
   if (!task || task.status === 'available') return type === 'delivery' ? 'Material separado' : 'Material liberado';
   if (task.status === 'assigned') return type === 'delivery' ? 'Entrega designada' : 'Retirada designada';
@@ -251,11 +263,14 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
         },
         {
           key: 'instrumentator-completed',
-          label: 'Concluídas',
+          label: 'Concluídas hoje',
           tone: 'green',
           icon: CheckCircle2,
-          statuses: ['ready_pickup', 'pickup_in_route', 'returned_stock'],
+          statuses: [],
           completed: true,
+          matches: (request) =>
+            ['ready_pickup', 'pickup_in_route', 'returned_stock'].includes(request.status) &&
+            happenedToday(getTaskByType(request, 'pickup')?.created_at),
           statusLabel: (request) => instrumentatorStatusLabels[request.status],
         },
       ];
@@ -291,13 +306,16 @@ export function OperationsDashboard({ profile, access, highlightedRequestId, ref
         },
         {
           key: 'driver-completed',
-          label: 'Concluídas',
+          label: 'Concluídas hoje',
           tone: 'green',
           icon: CheckCircle2,
           statuses: [],
           taskType: driverView,
           completed: true,
-          matches: (request) => taskMatches(request, ['completed']),
+          matches: (request) => {
+            const task = getTaskByType(request, driverView);
+            return taskMatches(request, ['completed']) && happenedToday(task?.completed_at);
+          },
           statusLabel: (_request, task) => driverTaskStatusLabel(driverView, task),
         },
       ];
