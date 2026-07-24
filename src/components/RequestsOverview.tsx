@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardPlus, Edit3, Eye, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, UserRoundCheck, X } from 'lucide-react';
+import { CalendarDays, ClipboardPlus, Edit3, Eye, ListRestart, LoaderCircle, Search, SlidersHorizontal, Trash2, UserRound, UserRoundCheck, X } from 'lucide-react';
 import type { RoleAccess } from '../permissions';
 import { supabase } from '../supabase';
 import type { Hospital, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
@@ -118,11 +118,15 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
   const [assigningTask, setAssigningTask] = useState<TransportTask | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [deleteRequestTarget, setDeleteRequestTarget] = useState<SurgeryRequest | null>(null);
+  const [statusRequestTarget, setStatusRequestTarget] = useState<SurgeryRequest | null>(null);
+  const [manualStatus, setManualStatus] = useState<RequestStatus>('ready_delivery');
+  const [manualStatusNote, setManualStatusNote] = useState('');
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [cancellingId, setCancellingId] = useState('');
   const [deletingId, setDeletingId] = useState('');
   const [error, setError] = useState('');
@@ -301,6 +305,44 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
       setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível designar o motorista.');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const openManualStatus = (request: SurgeryRequest) => {
+    setNotice('');
+    setError('');
+    setStatusRequestTarget(request);
+    setManualStatus(request.status === 'cancelled' ? 'ready_delivery' : request.status);
+    setManualStatusNote('');
+  };
+
+  const updateRequestStatusManually = async () => {
+    if (!statusRequestTarget || manualStatus === 'cancelled') return;
+    if (manualStatus === statusRequestTarget.status) {
+      setError('Selecione um status diferente do atual.');
+      return;
+    }
+
+    setUpdatingStatus(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const { error: updateError } = await supabase.rpc('set_request_status_manually', {
+        target_request_id: statusRequestTarget.id,
+        target_status: manualStatus,
+        action_note: manualStatusNote.trim(),
+      });
+      if (updateError) throw updateError;
+
+      setNotice(`Status alterado para “${statusLabels[manualStatus]}”. Tarefas e estoque foram sincronizados.`);
+      setStatusRequestTarget(null);
+      setManualStatusNote('');
+      await loadRequests(true);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Não foi possível alterar o status da solicitação.');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -552,6 +594,17 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                     {access.manage_requests && (
                     <button
                       type="button"
+                      onClick={() => openManualStatus(request)}
+                      disabled={request.status === 'cancelled'}
+                      title="Alterar status manualmente"
+                      aria-label="Alterar status manualmente"
+                    >
+                      <ListRestart size={16} />
+                    </button>
+                    )}
+                    {access.manage_requests && (
+                    <button
+                      type="button"
                       onClick={() => openAssignDriver(request)}
                       disabled={!assignableTask || !drivers.length || request.status === 'cancelled'}
                       title="Designar motorista"
@@ -648,6 +701,64 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
               <button className="card-action-button" type="button" onClick={() => void assignDriver()} disabled={assigning || !selectedDriverId}>
                 {assigning ? <LoaderCircle className="spin" size={16} /> : <UserRoundCheck size={16} />}
                 Designar
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {statusRequestTarget && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !updatingStatus && setStatusRequestTarget(null)}>
+          <section className="action-modal" role="dialog" aria-modal="true" aria-labelledby="manual-status-title">
+            <header>
+              <div>
+                <p className="eyebrow">Ajuste temporário</p>
+                <h2 id="manual-status-title">#{String(statusRequestTarget.code).padStart(4, '0')} - {statusRequestTarget.hospital}</h2>
+                <span>Status atual: {statusLabels[statusRequestTarget.status]}</span>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setStatusRequestTarget(null)} disabled={updatingStatus} aria-label="Fechar alteração de status">
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="manual-status-copy">
+              <strong>Esta ação ignora as etapas e evidências do fluxo normal.</strong>
+              <p>As tarefas abertas serão ajustadas e os materiais acompanharão o novo status. Nenhuma mensagem será enviada ao WhatsApp.</p>
+            </div>
+
+            <label>
+              <span>Novo status</span>
+              <select value={manualStatus} onChange={(event) => setManualStatus(event.target.value as RequestStatus)} autoFocus>
+                {(Object.keys(statusLabels) as RequestStatus[])
+                  .filter((status) => status !== 'cancelled')
+                  .map((status) => (
+                    <option value={status} key={status}>{statusLabels[status]}</option>
+                  ))}
+              </select>
+            </label>
+
+            <label>
+              <span>Motivo ou observação (opcional)</span>
+              <textarea
+                value={manualStatusNote}
+                onChange={(event) => setManualStatusNote(event.target.value)}
+                rows={3}
+                placeholder="Ex.: Etapa concluída antes da implantação do fluxo completo"
+              />
+            </label>
+
+            <footer>
+              <button className="card-detail-button" type="button" onClick={() => setStatusRequestTarget(null)} disabled={updatingStatus}>
+                Cancelar
+              </button>
+              <button
+                className="card-action-button"
+                type="button"
+                onClick={() => void updateRequestStatusManually()}
+                disabled={updatingStatus || manualStatus === statusRequestTarget.status}
+              >
+                {updatingStatus ? <LoaderCircle className="spin" size={16} /> : <ListRestart size={16} />}
+                {updatingStatus ? 'Atualizando...' : 'Atualizar status'}
               </button>
             </footer>
           </section>

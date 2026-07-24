@@ -42,7 +42,7 @@ export const ACCESS_LABELS: Record<AccessKey, { title: string; description: stri
   },
   create_requests: {
     title: 'Criar solicitações',
-    description: 'Cadastrar novas cirurgias manualmente ou por leitura de imagem.',
+    description: 'Cadastrar novas cirurgias e seus materiais pelo sistema.',
   },
   manage_requests: {
     title: 'Gerenciar solicitações',

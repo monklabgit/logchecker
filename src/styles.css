@@ -1477,6 +1477,25 @@ select:focus {
   font-size: 13px;
 }
 
+.manual-status-copy {
+  padding: 12px;
+  border: 1px solid rgba(218, 137, 15, 0.3);
+  border-radius: 9px;
+  background: #fff9e9;
+}
+
+.manual-status-copy strong {
+  color: #7a5200;
+  font-size: 13px;
+}
+
+.manual-status-copy p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .danger-modal-copy {
   padding: 12px;
   border: 1px solid #f0cac6;
