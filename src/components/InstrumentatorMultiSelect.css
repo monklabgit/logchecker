@@ -162,6 +162,8 @@
     max(14px, env(safe-area-inset-left));
   background: rgba(7, 25, 47, 0.62);
   backdrop-filter: blur(3px);
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .instrumentator-picker-sheet {
@@ -174,29 +176,34 @@
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
-.instrumentator-picker-sheet > header {
+.instrumentator-picker-header {
   display: flex;
+  position: relative;
+  z-index: 2;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 14px;
   border-bottom: 1px solid var(--line);
+  background: #fff;
 }
 
-.instrumentator-picker-sheet > header > div {
+.instrumentator-picker-header > div {
   display: grid;
   min-width: 0;
   gap: 3px;
 }
 
-.instrumentator-picker-sheet > header strong {
+.instrumentator-picker-header strong {
   color: var(--navy);
   font-size: 16px;
 }
 
-.instrumentator-picker-sheet > header span {
+.instrumentator-picker-header span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
@@ -219,7 +226,9 @@
   min-height: 50px;
 }
 
-.instrumentator-picker-sheet > footer {
+.instrumentator-picker-footer {
+  position: relative;
+  z-index: 2;
   padding:
     10px
     12px
@@ -228,7 +237,7 @@
   background: #fff;
 }
 
-.instrumentator-picker-sheet > footer .card-action-button {
+.instrumentator-picker-footer .card-action-button {
   width: 100%;
   min-height: 46px;
 }
@@ -243,7 +252,8 @@
 
   .instrumentator-picker-sheet {
     width: 100%;
-    max-height: min(82dvh, 620px);
+    height: min(82dvh, 620px);
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
     border-radius: 14px 14px 0 0;
   }
 }

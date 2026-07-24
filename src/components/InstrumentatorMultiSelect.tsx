@@ -25,6 +25,7 @@ export function InstrumentatorMultiSelect({
 }: InstrumentatorMultiSelectProps) {
   const pickerId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const selectedNames = options
@@ -60,10 +61,16 @@ export function InstrumentatorMultiSelect({
   useEffect(() => {
     if (!open || !isMobile) return undefined;
 
+    const documentElement = document.documentElement;
     const previousOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
+    documentElement.style.overflow = 'hidden';
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
     return () => {
       document.body.style.overflow = previousOverflow;
+      documentElement.style.overflow = previousDocumentOverflow;
     };
   }, [isMobile, open]);
 
@@ -125,28 +132,46 @@ export function InstrumentatorMultiSelect({
       )}
 
       {open && isMobile && createPortal(
-        <div className="instrumentator-picker-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
-          <section className="instrumentator-picker-sheet" role="dialog" aria-modal="true" aria-labelledby={`instrumentator-title-${pickerId}`}>
-            <header>
+        <div
+          className="instrumentator-picker-overlay"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setOpen(false);
+          }}
+        >
+          <section
+            className="instrumentator-picker-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`instrumentator-title-${pickerId}`}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <div className="instrumentator-picker-header">
               <div>
                 <strong id={`instrumentator-title-${pickerId}`}>Designar instrumentadores</strong>
                 <span>{selectedNames.length ? `${selectedNames.length} selecionado${selectedNames.length > 1 ? 's' : ''}` : 'Seleção opcional'}</span>
               </div>
-              <button className="icon-button" type="button" onClick={() => setOpen(false)} aria-label="Fechar seleção">
+              <button
+                ref={closeButtonRef}
+                className="icon-button"
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Fechar seleção"
+              >
                 <X size={20} />
               </button>
-            </header>
+            </div>
 
             <div id={`instrumentator-options-${pickerId}`} className="instrumentator-options" role="group" aria-label="Instrumentadores disponíveis">
               {optionList}
             </div>
 
-            <footer>
+            <div className="instrumentator-picker-footer">
               <button className="card-action-button" type="button" onClick={() => setOpen(false)}>
                 <Check size={17} />
-                Concluir seleção
+                Aplicar seleção{selectedNames.length ? ` (${selectedNames.length})` : ''}
               </button>
-            </footer>
+            </div>
           </section>
         </div>,
         document.body
