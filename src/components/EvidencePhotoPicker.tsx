@@ -10,6 +10,29 @@ type EvidencePhotoPickerProps = {
   emptyLabel?: string;
 };
 
+type CameraZoomCapabilities = MediaTrackCapabilities & {
+  zoom?: {
+    min: number;
+    max: number;
+  };
+};
+
+const setNormalCameraZoom = async (stream: MediaStream) => {
+  const videoTrack = stream.getVideoTracks()[0];
+  if (!videoTrack) return;
+
+  const capabilities = videoTrack.getCapabilities?.() as CameraZoomCapabilities | undefined;
+  if (!capabilities?.zoom || capabilities.zoom.min > 1 || capabilities.zoom.max < 1) return;
+
+  try {
+    await videoTrack.applyConstraints({
+      advanced: [{ zoom: 1 } as unknown as MediaTrackConstraintSet],
+    });
+  } catch {
+    // Alguns navegadores móveis informam o zoom, mas não aceitam alterá-lo via código.
+  }
+};
+
 export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel = 'Nenhuma foto anexada' }: EvidencePhotoPickerProps) {
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -43,7 +66,13 @@ export function EvidencePhotoPicker({ photos, onAddFiles, onRemove, emptyLabel =
         },
         audio: false,
       })
-      .then((stream) => {
+      .then(async (stream) => {
+        if (!active) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        await setNormalCameraZoom(stream);
         if (!active) {
           stream.getTracks().forEach((track) => track.stop());
           return;
