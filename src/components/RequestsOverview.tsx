@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import type { Hospital, Profile, RequestStatus, SurgeryRequest, TransportTask } from '../types';
 import { NewRequestForm } from './NewRequestForm';
 import { RequestDetails } from './RequestDetails';
+import { InstrumentatorMultiSelect } from './InstrumentatorMultiSelect';
 
 type RequestsOverviewProps = {
   profile: Profile;
@@ -25,6 +26,7 @@ type EditForm = {
   insurance: string;
   observation: string;
   priority: string;
+  assignedInstrumentatorIds: string[];
 };
 
 type EditItem = {
@@ -100,6 +102,9 @@ const formFromRequest = (request: SurgeryRequest): EditForm => ({
   insurance: request.insurance,
   observation: request.observation,
   priority: String(request.priority || 2),
+  assignedInstrumentatorIds: (request.instrumentator_assignments || []).map(
+    (assignment) => assignment.instrumentator_id
+  ),
 });
 
 const getOpenAssignableTask = (request: SurgeryRequest) =>
@@ -111,6 +116,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
   const [requests, setRequests] = useState<SurgeryRequest[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [drivers, setDrivers] = useState<Profile[]>([]);
+  const [instrumentators, setInstrumentators] = useState<Pick<Profile, 'id' | 'full_name'>[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SurgeryRequest | null>(null);
   const [creatingRequest, setCreatingRequest] = useState(false);
   const [editingRequest, setEditingRequest] = useState<SurgeryRequest | null>(null);
@@ -150,7 +156,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
     const { data, error: queryError } = await supabase
       .from('surgery_requests')
       .select(
-        '*, hospital_record:hospitals(*), request_items(*), transport_tasks(*, assigned_driver:profiles!transport_tasks_assigned_driver_id_fkey(id, full_name)), transport_evidence_photos(*)'
+        '*, hospital_record:hospitals(*), request_items(*), transport_tasks(*, assigned_driver:profiles!transport_tasks_assigned_driver_id_fkey(id, full_name)), transport_evidence_photos(*), instrumentator_assignments:surgery_request_instrumentators(instrumentator_id)'
       )
       .order('created_at', { ascending: false });
 
@@ -182,16 +188,27 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
     setDrivers((data || []) as Profile[]);
   };
 
+  const loadInstrumentators = async () => {
+    const { data, error: queryError } = await supabase.rpc('list_active_instrumentators');
+    if (queryError) {
+      setError(queryError.message);
+      return;
+    }
+    setInstrumentators((data || []) as Pick<Profile, 'id' | 'full_name'>[]);
+  };
+
   useEffect(() => {
     void loadRequests();
     void loadHospitals();
     void loadDrivers();
+    void loadInstrumentators();
 
     const channel = supabase
       .channel('requests-overview')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'surgery_requests' }, () => void loadRequests(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'request_items' }, () => void loadRequests(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transport_tasks' }, () => void loadRequests(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'surgery_request_instrumentators' }, () => void loadRequests(true))
       .subscribe();
 
     return () => {
@@ -240,7 +257,7 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
     );
   };
 
-  const updateEditForm = (key: keyof EditForm, value: string) => {
+  const updateEditForm = <Key extends keyof EditForm>(key: Key, value: EditForm[Key]) => {
     setEditForm((current) => (current ? { ...current, [key]: value } : current));
   };
 
@@ -418,6 +435,12 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
         .in('status', ['available', 'assigned', 'in_route']);
 
       if (taskError) throw taskError;
+
+      const { error: assignmentError } = await supabase.rpc('set_request_instrumentators', {
+        target_request_id: editingRequest.id,
+        target_instrumentator_ids: editForm.assignedInstrumentatorIds,
+      });
+      if (assignmentError) throw assignmentError;
 
       setNotice('Solicitação atualizada.');
       setEditingRequest(null);
@@ -852,6 +875,14 @@ export function RequestsOverview({ profile, access, onRequestCreated }: Requests
                   <span>Convênio</span>
                   <input value={editForm.insurance} onChange={(event) => updateEditForm('insurance', event.target.value)} />
                 </label>
+                <div className="multi-select-field wide">
+                  <span>Instrumentadores</span>
+                  <InstrumentatorMultiSelect
+                    options={instrumentators}
+                    selectedIds={editForm.assignedInstrumentatorIds}
+                    onChange={(selectedIds) => updateEditForm('assignedInstrumentatorIds', selectedIds)}
+                  />
+                </div>
                 <label>
                   <span>Prioridade</span>
                   <select value={editForm.priority} onChange={(event) => updateEditForm('priority', event.target.value)}>
